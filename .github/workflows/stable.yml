@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   pages: write
   id-token: write
 
@@ -131,6 +132,10 @@ jobs:
               --title $title --notes $env:RELEASE_NOTES --latest
           }
           gh release upload $env:RELEASE_TAG $setup $portable $manifest --repo ${{ github.repository }} --clobber
+
+      - name: Refresh stable Pages manifest
+        shell: pwsh
+        run: gh workflow run nightly.yml --ref nightly --repo ${{ github.repository }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
