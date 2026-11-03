@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="YomuPlayer.Desktop.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:YomuPlayer.Desktop">
+
+    <Page.Resources>
+        <DataTemplate x:Key="HomeShelfTemplate" x:DataType="local:ShelfVM">
+            <StackPanel Spacing="6" Margin="0,12,0,8">
+                <TextBlock Text="{x:Bind Title}" Visibility="{x:Bind TitleVisibility}"
+                           Style="{ThemeResource SubtitleTextBlockStyle}" />
+
+                <local:ShelfScroller Visibility="{x:Bind CardsVisibility}"
+                                     ItemsSource="{x:Bind Items}"
+                                     ItemTemplate="{StaticResource CardTemplate}" />
+
+                <ItemsRepeater ItemsSource="{x:Bind Items}"
+                               ItemTemplate="{StaticResource QuickRowTemplate}"
+                               Visibility="{x:Bind ListVisibility}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout Orientation="Horizontal" MinItemWidth="340"
+                                           MinItemHeight="64" MinRowSpacing="4" MinColumnSpacing="12"
+                                           ItemsStretch="Fill" />
+                    </ItemsRepeater.Layout>
+                </ItemsRepeater>
+
+                <ItemsRepeater ItemsSource="{x:Bind Items}"
+                               ItemTemplate="{StaticResource ChipTemplate}"
+                               Visibility="{x:Bind ChipsVisibility}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout Orientation="Horizontal" MinItemWidth="200" MinItemHeight="48"
+                                           MinRowSpacing="8" MinColumnSpacing="8" ItemsStretch="Fill" />
+                    </ItemsRepeater.Layout>
+                </ItemsRepeater>
+            </StackPanel>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Padding="28,8,28,24" Spacing="8">
+                <TextBlock Text="Home" Style="{ThemeResource TitleTextBlockStyle}" />
+
+                <StackPanel x:Name="ForYouPanel" Visibility="Collapsed" Spacing="4">
+                    <Grid ColumnSpacing="12" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="For You" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                            <TextBlock Text="Built from your Liked Music"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <ToggleButton x:Name="ShuffleToggle" Content="Shuffle" Click="ShuffleToggle_Click"
+                                          ToolTipService.ToolTip="Shuffle the For You shelves" />
+                            <Button Content="Refresh" Click="Refresh_Click" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel x:Name="ForYouLoading" Orientation="Horizontal" Spacing="8"
+                                Visibility="Collapsed">
+                        <ProgressRing Width="20" Height="20" IsActive="True" />
+                        <TextBlock Text="Building For You&#x2026;" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{x:Bind ForYouShelves}"
+                                  ItemTemplate="{StaticResource HomeShelfTemplate}" />
+                    <TextBlock x:Name="ForYouEmpty" Text="Like songs to build this page."
+                               Visibility="Collapsed"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+
+                <StackPanel x:Name="LikedPanel" Visibility="Collapsed" Spacing="4" Margin="0,8,0,0">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Liked Music" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                        <Button Grid.Column="1" Content="See all" Click="SeeAllLiked_Click" />
+                    </Grid>
+                    <TextBlock x:Name="LikedEmpty" Text="No liked songs yet." Visibility="Collapsed"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ListView x:Name="LikedList" ItemsSource="{x:Bind LikedRows}"
+                              ItemTemplate="{StaticResource TrackRowTemplate}"
+                              SelectionMode="None" IsItemClickEnabled="False"
+                              MaxHeight="1600" VerticalAlignment="Top"
+                              ScrollViewer.VerticalScrollMode="Disabled"
+                              ScrollViewer.VerticalScrollBarVisibility="Disabled" />
+                </StackPanel>
+
+                <ItemsControl ItemsSource="{x:Bind MoreShelves}"
+                              ItemTemplate="{StaticResource HomeShelfTemplate}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <ProgressRing x:Name="Busy" Width="40" Height="40" IsActive="False"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </Grid>
+</Page>

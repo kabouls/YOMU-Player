@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="YomuPlayer.Desktop.ProfilePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="32,16,32,32" Spacing="22" MaxWidth="760" HorizontalAlignment="Left">
+            <TextBlock Text="Profile" Style="{ThemeResource TitleTextBlockStyle}" />
+
+            <StackPanel x:Name="SignedInPanel" Spacing="20">
+                <StackPanel Orientation="Horizontal" Spacing="18">
+                    <PersonPicture x:Name="Avatar" Width="96" Height="96" />
+                    <StackPanel VerticalAlignment="Center" Spacing="4">
+                        <TextBlock x:Name="NameText" Style="{ThemeResource TitleTextBlockStyle}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="EmailText" Style="{ThemeResource BodyTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button x:Name="LikedButton" Click="LikedButton_Click"
+                            Style="{StaticResource AccentButtonStyle}" Padding="18,10" Foreground="White">
+                        <TextBlock Text="Liked Music" Foreground="White" />
+                    </Button>
+                    <Button Content="Manage Google account" Click="ManageAccount_Click" Padding="18,10" />
+                    <Button x:Name="SignOutButton" Content="Sign out" Click="SignOut_Click" Padding="18,10" />
+                </StackPanel>
+
+                <TextBlock TextWrapping="Wrap" MaxWidth="640"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Signing out removes the encrypted Google token from this PC. It does not delete your Google account, your playlists or your Liked Music. You can sign in again here or from Library." />
+            </StackPanel>
+
+            <StackPanel x:Name="SignedOutPanel" Spacing="14" Visibility="Collapsed">
+                <TextBlock Text="You are signed out." Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock TextWrapping="Wrap" MaxWidth="640"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Sign in with Google to load Liked Music and your playlists." />
+                <Button Content="Sign in with Google" Click="SignIn_Click" Padding="18,10"
+                        Style="{StaticResource AccentButtonStyle}" Foreground="White" />
+            </StackPanel>
+
+            <StackPanel Spacing="10" Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock Text="Changelog" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    <TextBlock x:Name="VersionLabel" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button Content="Check for updates" Click="CheckUpdates_Click" Padding="14,8" />
+                    <TextBlock x:Name="UpdateStatusText" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel x:Name="ChangelogPanel" Spacing="14" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

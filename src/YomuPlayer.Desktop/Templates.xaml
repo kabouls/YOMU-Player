@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    x:Class="YomuPlayer.Desktop.Templates"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:YomuPlayer.Desktop">
+
+    <Style x:Key="ExplicitBadgeStyle" TargetType="Border">
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="#8A8A8A" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Padding" Value="3,0" />
+        <Setter Property="Margin" Value="6,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Card for carousels. Playlists get a stacked look; every card carries a type badge. -->
+    <DataTemplate x:Key="CardTemplate" x:DataType="local:ItemVM">
+        <Button DataContext="{x:Bind}" Command="{x:Bind ActivateCommand}" Padding="8" Background="Transparent" BorderThickness="0"
+                CornerRadius="10" HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
+                PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited" ContextRequested="Row_ContextRequested">
+            <StackPanel Width="160" Spacing="6">
+                <Grid Width="160" Height="170">
+                    <Border Height="4" Margin="24,0,24,0" VerticalAlignment="Top" CornerRadius="3"
+                            Background="#2B2B2B" Visibility="{x:Bind StackVisibility}" />
+                    <Border Height="4" Margin="12,6,12,0" VerticalAlignment="Top" CornerRadius="3"
+                            Background="#454545" Visibility="{x:Bind StackVisibility}" />
+                    <Border Width="160" Height="160" VerticalAlignment="Bottom" CornerRadius="{x:Bind ArtRadius}">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{x:Bind Art}" Stretch="UniformToFill" />
+                        </Border.Background>
+                    </Border>
+                    <Grid Height="160" VerticalAlignment="Bottom" IsHitTestVisible="False">
+                        <Grid Tag="HoverPlay" Opacity="0" IsHitTestVisible="False" Visibility="{x:Bind PlayOverlayVisibility}">
+                        <Grid.OpacityTransition>
+                            <ScalarTransition />
+                        </Grid.OpacityTransition>
+                        <Border Background="#66000000" CornerRadius="{x:Bind ArtRadius}" />
+                        <Border Width="44" Height="44" CornerRadius="22" Background="#CC000000"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE768;" FontSize="18" Foreground="White" />
+                        </Border>
+                    </Grid>
+                    </Grid>
+                    <Border Margin="8" HorizontalAlignment="Left" VerticalAlignment="Bottom" CornerRadius="4"
+                            Padding="6,2" Background="{x:Bind KindBrush}" Visibility="{x:Bind BadgeVisibility}">
+                        <TextBlock Text="{x:Bind KindLabel}" FontSize="10" FontWeight="SemiBold"
+                                   CharacterSpacing="60" Foreground="White" />
+                    </Border>
+                </Grid>
+                <TextBlock Text="{x:Bind Title}" MaxLines="2" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="{x:Bind Subtitle}" MaxLines="3" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                           Style="{ThemeResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Button>
+    </DataTemplate>
+
+    <!-- Search results: row with a type pill before the duration -->
+    <DataTemplate x:Key="ListItemTemplate" x:DataType="local:ItemVM">
+        <Button DataContext="{x:Bind}" Command="{x:Bind ActivateCommand}" Padding="8,6" Background="Transparent" BorderThickness="0"
+                CornerRadius="8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited" ContextRequested="Row_ContextRequested">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="48" Height="48" VerticalAlignment="Center">
+                    <Border CornerRadius="{x:Bind SmallArtRadius}">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{x:Bind SmallArt}" Stretch="UniformToFill" />
+                        </Border.Background>
+                    </Border>
+                    <Grid Tag="HoverPlay" Opacity="0" IsHitTestVisible="False" Visibility="{x:Bind PlayOverlayVisibility}">
+                        <Grid.OpacityTransition>
+                            <ScalarTransition />
+                        </Grid.OpacityTransition>
+                        <Border Background="#66000000" CornerRadius="{x:Bind SmallArtRadius}" />
+                        <Border Width="28" Height="28" CornerRadius="14" Background="#CC000000"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE768;" FontSize="12" Foreground="White" />
+                        </Border>
+                    </Grid>
+                </Grid>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <TextBlock Text="{x:Bind Title}" MaxLines="2" TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis" />
+                        <Border Style="{StaticResource ExplicitBadgeStyle}"
+                                Visibility="{x:Bind ExplicitVisibility}">
+                            <TextBlock Text="E" FontSize="9" Foreground="#B8B8B8" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind Subtitle}" MaxLines="2" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <Border Grid.Column="2" VerticalAlignment="Center" CornerRadius="4" Padding="6,2"
+                        Background="{x:Bind KindBrush}" Visibility="{x:Bind BadgeVisibility}">
+                    <TextBlock Text="{x:Bind KindLabel}" FontSize="10" FontWeight="SemiBold"
+                               CharacterSpacing="60" Foreground="White" />
+                </Border>
+                <TextBlock Grid.Column="3" Text="{x:Bind Trailing}" VerticalAlignment="Center" MinWidth="40"
+                           TextAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Button>
+    </DataTemplate>
+
+    <!-- Shelf rows (quick picks, top artists): no pill, so titles and artist lines get the full width -->
+    <DataTemplate x:Key="QuickRowTemplate" x:DataType="local:ItemVM">
+        <Button DataContext="{x:Bind}" Command="{x:Bind ActivateCommand}" Padding="8,6" Background="Transparent" BorderThickness="0"
+                CornerRadius="8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited" ContextRequested="Row_ContextRequested">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="48" Height="48" VerticalAlignment="Center">
+                    <Border CornerRadius="{x:Bind SmallArtRadius}">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{x:Bind SmallArt}" Stretch="UniformToFill" />
+                        </Border.Background>
+                    </Border>
+                    <Grid Tag="HoverPlay" Opacity="0" IsHitTestVisible="False" Visibility="{x:Bind PlayOverlayVisibility}">
+                        <Grid.OpacityTransition>
+                            <ScalarTransition />
+                        </Grid.OpacityTransition>
+                        <Border Background="#66000000" CornerRadius="{x:Bind SmallArtRadius}" />
+                        <Border Width="28" Height="28" CornerRadius="14" Background="#CC000000"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE768;" FontSize="12" Foreground="White" />
+                        </Border>
+                    </Grid>
+                </Grid>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <TextBlock Text="{x:Bind Title}" MaxLines="2" TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis" />
+                        <Border Style="{StaticResource ExplicitBadgeStyle}"
+                                Visibility="{x:Bind ExplicitVisibility}">
+                            <TextBlock Text="E" FontSize="9" Foreground="#B8B8B8" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind Subtitle}" MaxLines="1" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                
+                <TextBlock Grid.Column="2" Text="{x:Bind Trailing}" VerticalAlignment="Center" MinWidth="40"
+                           TextAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Button>
+    </DataTemplate>
+
+    <!-- Mood / genre / section chip with a colored stripe -->
+    <DataTemplate x:Key="ChipTemplate" x:DataType="local:ItemVM">
+        <Button Command="{x:Bind ActivateCommand}" Padding="0" MinHeight="48" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch" CornerRadius="8">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="6" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Background="{x:Bind Stripe}" CornerRadius="8,0,0,8" />
+                <TextBlock Grid.Column="1" Text="{x:Bind Title}" VerticalAlignment="Center" Margin="0,0,12,0"
+                           MaxLines="2" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </Button>
+    </DataTemplate>
+
+    <!-- Track row inside an album / playlist -->
+    <DataTemplate x:Key="TrackRowTemplate" x:DataType="local:TrackVM">
+        <Button DataContext="{x:Bind}" Command="{x:Bind PlayCommand}" Padding="8,6" Background="Transparent" BorderThickness="0"
+                CornerRadius="8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited" ContextRequested="Row_ContextRequested">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="36" />
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{x:Bind Number}" VerticalAlignment="Center" TextAlignment="Right"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Grid Grid.Column="1" Width="48" Height="48">
+                    <Border CornerRadius="6">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{x:Bind Art}" Stretch="UniformToFill" />
+                        </Border.Background>
+                    </Border>
+                    <Grid Tag="HoverPlay" Opacity="0" IsHitTestVisible="False">
+                        <Grid.OpacityTransition>
+                            <ScalarTransition />
+                        </Grid.OpacityTransition>
+                        <Border Background="#66000000" CornerRadius="6" />
+                        <Border Width="28" Height="28" CornerRadius="14" Background="#CC000000"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE768;" FontSize="12" Foreground="White" />
+                        </Border>
+                    </Grid>
+                </Grid>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <TextBlock Text="{x:Bind Title}" MaxLines="2" TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis" />
+                        <Border Style="{StaticResource ExplicitBadgeStyle}"
+                                Visibility="{x:Bind ExplicitVisibility}">
+                            <TextBlock Text="E" FontSize="9" Foreground="#B8B8B8" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind Subtitle}" MaxLines="2" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                               Style="{ThemeResource CaptionTextBlockStyle}" Visibility="{x:Bind PlainSubtitleVisibility}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{x:Bind Artists}" Visibility="{x:Bind LinksVisibility}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="local:ArtistLinkVM">
+                                <HyperlinkButton Content="{x:Bind Label}" Command="{x:Bind OpenCommand}"
+                                                 Padding="0" MinHeight="0" FontSize="12" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <TextBlock Grid.Column="3" Text="{x:Bind Album}" VerticalAlignment="Center" MaxLines="2"
+                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock Grid.Column="4" Text="{x:Bind Duration}" VerticalAlignment="Center" MinWidth="44"
+                           TextAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Button>
+    </DataTemplate>
+
+    <!-- Predictive search: rich result (art, title, artist, type) -->
+    <DataTemplate x:Key="SuggestRichTemplate" x:DataType="local:ItemVM">
+        <Grid ColumnSpacing="12" Padding="0,4" MinHeight="56">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="44" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Width="44" Height="44" CornerRadius="{x:Bind SmallArtRadius}" VerticalAlignment="Center">
+                <Border.Background>
+                    <ImageBrush ImageSource="{x:Bind SmallArt}" Stretch="UniformToFill" />
+                </Border.Background>
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis"
+                           Style="{ThemeResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <Border Grid.Column="2" VerticalAlignment="Center" CornerRadius="4" Padding="6,2"
+                    Background="{x:Bind KindBrush}" Visibility="{x:Bind BadgeVisibility}">
+                <TextBlock Text="{x:Bind KindLabel}" FontSize="10" FontWeight="SemiBold"
+                           CharacterSpacing="60" Foreground="White" />
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Predictive search: plain suggestion -->
+    <DataTemplate x:Key="SuggestTextTemplate" x:DataType="local:TextSuggestion">
+        <Grid ColumnSpacing="12" Padding="0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="44" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <FontIcon Glyph="&#xE721;" FontSize="16" HorizontalAlignment="Center"
+                      Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Grid.Column="1" Text="{x:Bind Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

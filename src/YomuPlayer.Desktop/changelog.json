@@ -1,0 +1,14 @@
+[
+  {
+    "version": "1.0.0",
+    "date": "2026-11-03",
+    "channel": "stable",
+    "notes": [
+      "Initial YOMU Player release.",
+      "Home with For You, Liked Music and Explore shelves.",
+      "Signed-in library via Google OAuth and the YouTube Data API.",
+      "Like, dislike, radio and queue support.",
+      "Lite mode, profile, playlist management and saved window state."
+    ]
+  }
+]

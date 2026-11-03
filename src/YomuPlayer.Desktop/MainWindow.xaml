@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="YomuPlayer.Desktop.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:YomuPlayer.Desktop">
+
+    <Grid x:Name="RootGrid" Background="#000000">
+        <Grid.Resources>
+            <local:SuggestionSelector x:Key="SuggestSelector"
+                                      Rich="{StaticResource SuggestRichTemplate}"
+                                      Text="{StaticResource SuggestTextTemplate}" />
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom title bar: menu, back, wordmark, centered search, Lite mode -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition x:Name="RightInsetColumn" Width="0" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel x:Name="TitleLeft" Orientation="Horizontal" Margin="6,0,0,0" Spacing="2"
+                        VerticalAlignment="Center">
+                <Button x:Name="MenuButton" Click="MenuButton_Click" Style="{StaticResource SubtleButtonStyle}"
+                        Width="44" Height="40" AutomationProperties.AutomationId="MenuButton">
+                    <FontIcon Glyph="&#xE700;" />
+                </Button>
+                <Button x:Name="UpdateChip" Click="UpdateChip_Click" Visibility="Collapsed"
+                        Height="32" Padding="12,0" CornerRadius="16" Margin="6,0,2,0"
+                        Background="#33FF0033" BorderThickness="1" BorderBrush="#66FF0033"
+                        Foreground="White" VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Update available"
+                        AutomationProperties.AutomationId="UpdateChip">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE895;" FontSize="12" Foreground="White" />
+                        <TextBlock Text="Update available" FontSize="12" FontWeight="SemiBold" Foreground="White" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BackButton" Click="BackButton_Click" Style="{StaticResource SubtleButtonStyle}"
+                        Width="44" Height="40" Visibility="Collapsed"
+                        AutomationProperties.AutomationId="BackButton">
+                    <FontIcon Glyph="&#xE72B;" />
+                </Button>
+                <TextBlock x:Name="WordmarkText" Text="YOMU Player" Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center"
+                           Margin="8,0,0,0" />
+            </StackPanel>
+
+            <Button x:Name="LiteExitButton" Visibility="Collapsed" Click="LiteExitButton_Click" Margin="10,0,0,0"
+                    VerticalAlignment="Center" AutomationProperties.AutomationId="LiteExitButton">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE740;" FontSize="14" />
+                    <TextBlock Text="Back to normal mode" />
+                </StackPanel>
+            </Button>
+
+            <AutoSuggestBox x:Name="SearchBox" Grid.Column="1" MinWidth="240" MaxWidth="560"
+                            AutomationProperties.AutomationId="SearchBox"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0"
+                            PlaceholderText="Search, or paste a YouTube Music link  ( / )" QueryIcon="Find"
+                            UpdateTextOnSelect="False" MaxSuggestionListHeight="460"
+                            ItemTemplateSelector="{StaticResource SuggestSelector}"
+                            TextChanged="SearchBox_TextChanged"
+                            QuerySubmitted="SearchBox_QuerySubmitted" />
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Button x:Name="ProfileButton" Click="ProfileButton_Click" Style="{StaticResource SubtleButtonStyle}"
+                        Width="36" Height="36" Padding="0" CornerRadius="18" Visibility="Collapsed"
+                        ToolTipService.ToolTip="Account and sign out"
+                        AutomationProperties.AutomationId="ProfileButton">
+                    <PersonPicture x:Name="ProfileAvatar" Width="28" Height="28" />
+                </Button>
+                <Button x:Name="LiteButton" Click="LiteButton_Click"
+                        Style="{StaticResource AccentButtonStyle}" MinWidth="0" Height="32" Padding="14,0"
+                        CornerRadius="16" VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Lite mode: tiny window, lowest memory use"
+                        AutomationProperties.AutomationId="LiteButton">
+                    <TextBlock Text="Lite mode" Foreground="White" FontSize="12" FontWeight="SemiBold" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <NavigationView x:Name="NavView" Grid.Row="1" PaneDisplayMode="Auto" OpenPaneLength="220"
+                        CompactPaneLength="56" IsBackButtonVisible="Collapsed" IsPaneToggleButtonVisible="False"
+                        IsSettingsVisible="False" Background="Transparent"
+                        SelectionChanged="NavView_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Home" Tag="home">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE80F;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Explore" Tag="explore">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE774;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Library" Tag="library">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F1;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <!-- Signed-in library: hidden until an account is available. Playlist items are inserted in code. -->
+                <NavigationViewItemHeader x:Name="LibraryHeader" Content="Your library" Visibility="Collapsed" />
+                <NavigationViewItem x:Name="NewPlaylistItem" Content="New playlist" Tag="newplaylist"
+                                    Visibility="Collapsed">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE710;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="LikedMusicItem" Content="Liked Music" Tag="liked"
+                                    Visibility="Collapsed">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE00B;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Grid>
+                <Frame x:Name="ContentFrame" />
+                <InfoBar x:Name="ErrorBar" Severity="Error" IsOpen="False" IsClosable="True"
+                         HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0" MaxWidth="640" />
+            </Grid>
+        </NavigationView>
+
+        <local:PlayerBar x:Name="Bar" Grid.Row="2" />
+
+        <!-- Lite mode: nothing but the essentials -->
+        <Grid x:Name="LitePanel" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Padding="20,0,20,12"
+              Background="#000000">
+            <StackPanel VerticalAlignment="Center" Spacing="10">
+                <StackPanel>
+                    <TextBlock x:Name="LiteTitle" Text="Nothing playing" TextTrimming="CharacterEllipsis"
+                               Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Name="LiteArtist" TextTrimming="CharacterEllipsis"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <ToggleButton x:Name="LiteShuffle" Click="LiteShuffle_Click" Width="44" Height="44"
+                                  MinWidth="0" Padding="0" Background="Transparent" BorderThickness="0">
+                        <FontIcon Glyph="&#xE8B1;" />
+                    </ToggleButton>
+                    <Button Click="LitePrev_Click" Style="{StaticResource SubtleButtonStyle}" Width="44" Height="44">
+                        <FontIcon Glyph="&#xE892;" />
+                    </Button>
+                    <Button x:Name="LitePlayPause" Click="LitePlayPause_Click" Style="{StaticResource AccentButtonStyle}"
+                            Width="48" Height="48" CornerRadius="24" Padding="0" Foreground="White">
+                        <FontIcon x:Name="LitePlayIcon" Glyph="&#xE768;" Foreground="White" />
+                    </Button>
+                    <Button Click="LiteNext_Click" Style="{StaticResource SubtleButtonStyle}" Width="44" Height="44">
+                        <FontIcon Glyph="&#xE893;" />
+                    </Button>
+                    <Button x:Name="LiteRepeat" Click="LiteRepeat_Click" Style="{StaticResource SubtleButtonStyle}"
+                            Width="44" Height="44">
+                        <FontIcon x:Name="LiteRepeatIcon" Glyph="&#xE8EE;" Opacity="0.5" />
+                    </Button>
+                    <Button x:Name="LiteLike" Click="LiteLike_Click" Style="{StaticResource SubtleButtonStyle}"
+                            Width="36" Height="36" Visibility="Collapsed" IsEnabled="False"
+                            ToolTipService.ToolTip="Like this song"
+                            AutomationProperties.AutomationId="LiteLike">
+                        <Grid Width="18" Height="18">
+                            <FontIcon x:Name="LiteLikeIcon" Glyph="&#xE8E1;" FontSize="14"
+                                      Foreground="White" Opacity="0.55" />
+                            <FontIcon x:Name="LiteLikeFilledIcon" Glyph="&#xF3BF;" FontSize="14"
+                                      Foreground="White" Visibility="Collapsed" />
+                        </Grid>
+                    </Button>
+                    <Button x:Name="LiteDislike" Click="LiteDislike_Click" Style="{StaticResource SubtleButtonStyle}"
+                            Width="36" Height="36" Visibility="Collapsed" IsEnabled="False"
+                            ToolTipService.ToolTip="Dislike this song"
+                            AutomationProperties.AutomationId="LiteDislike">
+                        <Grid Width="18" Height="18">
+                            <FontIcon x:Name="LiteDislikeIcon" Glyph="&#xE8E0;" FontSize="14"
+                                      Foreground="White" Opacity="0.55" />
+                            <FontIcon x:Name="LiteDislikeFilledIcon" Glyph="&#xF3C0;" FontSize="14"
+                                      Foreground="White" Visibility="Collapsed" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
+
+                <!-- Volume, so lite mode does not need the full bar -->
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <Button x:Name="LiteMute" Click="LiteMute_Click" Style="{StaticResource SubtleButtonStyle}"
+                            Width="36" Height="36" ToolTipService.ToolTip="Mute">
+                        <FontIcon x:Name="LiteVolumeIcon" Glyph="&#xE767;" FontSize="14" />
+                    </Button>
+                    <Slider x:Name="LiteVolume" Width="176" Minimum="0" Maximum="100" Value="70"
+                            ValueChanged="LiteVolume_ValueChanged"
+                            AutomationProperties.AutomationId="LiteVolume">
+                        <Slider.Resources>
+                            <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFFFF" />
+                            <SolidColorBrush x:Key="SliderOuterThumbBackground" Color="#FFFFFFFF" />
+                            <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#00FFFFFF" />
+                        </Slider.Resources>
+                    </Slider>
+                    <TextBlock x:Name="LiteVolumeText" Text="70" Width="26" VerticalAlignment="Center"
+                               TextAlignment="Right" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,48 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CB332369-229F-402A-A30D-5F8B3B276AC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YomuPlayer.Core", "src\YomuPlayer.Core\YomuPlayer.Core.csproj", "{3080EFA1-7D93-475C-9296-B213C4089328}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YomuPlayer.Cli", "src\YomuPlayer.Cli\YomuPlayer.Cli.csproj", "{F2ECDEE3-62D2-4ABE-AA75-B7485F2AA42A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YomuPlayer.Audio.Vlc", "src\YomuPlayer.Audio.Vlc\YomuPlayer.Audio.Vlc.csproj", "{5B86B005-2D2F-4253-81ED-71FBFD3AE551}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YomuPlayer.PlayCli", "src\YomuPlayer.PlayCli\YomuPlayer.PlayCli.csproj", "{2D419858-EFE2-405B-9137-913E2B853B2D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3080EFA1-7D93-475C-9296-B213C4089328}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3080EFA1-7D93-475C-9296-B213C4089328}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3080EFA1-7D93-475C-9296-B213C4089328}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3080EFA1-7D93-475C-9296-B213C4089328}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2ECDEE3-62D2-4ABE-AA75-B7485F2AA42A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2ECDEE3-62D2-4ABE-AA75-B7485F2AA42A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2ECDEE3-62D2-4ABE-AA75-B7485F2AA42A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2ECDEE3-62D2-4ABE-AA75-B7485F2AA42A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B86B005-2D2F-4253-81ED-71FBFD3AE551}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B86B005-2D2F-4253-81ED-71FBFD3AE551}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B86B005-2D2F-4253-81ED-71FBFD3AE551}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B86B005-2D2F-4253-81ED-71FBFD3AE551}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D419858-EFE2-405B-9137-913E2B853B2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D419858-EFE2-405B-9137-913E2B853B2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D419858-EFE2-405B-9137-913E2B853B2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D419858-EFE2-405B-9137-913E2B853B2D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3080EFA1-7D93-475C-9296-B213C4089328} = {CB332369-229F-402A-A30D-5F8B3B276AC3}
+		{F2ECDEE3-62D2-4ABE-AA75-B7485F2AA42A} = {CB332369-229F-402A-A30D-5F8B3B276AC3}
+		{5B86B005-2D2F-4253-81ED-71FBFD3AE551} = {CB332369-229F-402A-A30D-5F8B3B276AC3}
+		{2D419858-EFE2-405B-9137-913E2B853B2D} = {CB332369-229F-402A-A30D-5F8B3B276AC3}
+	EndGlobalSection
+EndGlobal

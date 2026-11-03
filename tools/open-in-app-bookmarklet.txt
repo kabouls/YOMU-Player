@@ -1,0 +1,10 @@
+Open the page you are looking at (music.youtube.com or youtube.com) in YT Music Client.
+
+1. Make a new bookmark in your browser.
+2. Name it "Open in YT Music Client".
+3. Paste this as the URL:
+
+javascript:(function(){location.href='ytmclient://open?u='+encodeURIComponent(location.href)})()
+
+The first time, the browser asks to allow opening YT Music Client; tick "always allow".
+The app must have been started once so it can register the ytmclient:// link type.

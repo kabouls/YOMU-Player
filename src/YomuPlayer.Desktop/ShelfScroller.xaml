@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="YomuPlayer.Desktop.ShelfScroller"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="ShelfScroller_Loaded">
+
+    <Grid>
+        <ScrollViewer x:Name="Scroller"
+                      HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden"
+                      VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled"
+                      IsHorizontalScrollChainingEnabled="False"
+                      PointerPressed="Scroller_PointerPressed"
+                      PointerReleased="Scroller_PointerReleased"
+                      PointerCanceled="Scroller_PointerReleased"
+                      PointerCaptureLost="Scroller_PointerReleased"
+                      SizeChanged="Scroller_SizeChanged"
+                      ViewChanged="Scroller_ViewChanged">
+            <ItemsRepeater x:Name="Repeater"
+                           ItemsSource="{x:Bind ItemsSource, Mode=OneWay}"
+                           ItemTemplate="{x:Bind ItemTemplate, Mode=OneWay}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Horizontal" Spacing="8" />
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+        <Button x:Name="LeftButton" Click="LeftButton_Click" Visibility="Collapsed"
+                Width="32" Height="32" MinWidth="0" Padding="0" CornerRadius="16"
+                Background="#E6000000" BorderThickness="0" Foreground="White"
+                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0"
+                ToolTipService.ToolTip="Scroll left">
+            <FontIcon Glyph="&#xE76B;" FontSize="12" Foreground="White" />
+        </Button>
+
+        <Button x:Name="RightButton" Click="RightButton_Click" Visibility="Collapsed"
+                Width="32" Height="32" MinWidth="0" Padding="0" CornerRadius="16"
+                Background="#E6000000" BorderThickness="0" Foreground="White"
+                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
+                ToolTipService.ToolTip="Scroll right">
+            <FontIcon Glyph="&#xE76C;" FontSize="12" Foreground="White" />
+        </Button>
+    </Grid>
+</UserControl>

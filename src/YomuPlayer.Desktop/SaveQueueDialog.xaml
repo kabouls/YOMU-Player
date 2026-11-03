@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="YomuPlayer.Desktop.SaveQueueDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="using:YomuPlayer.Core"
+    Title="Save queue to playlist"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <Grid Width="460" RowSpacing="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Choose a playlist, or create a new one." TextWrapping="Wrap"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+        <ListView x:Name="PlaylistList" Grid.Row="1" Height="230" SelectionMode="Single">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="core:MediaItem">
+                    <StackPanel Spacing="1" Padding="4,2">
+                        <TextBlock Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock x:Name="EmptyText" Grid.Row="1" Text="No playlists yet. Create one below."
+                   Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+        <TextBox x:Name="NewName" Grid.Row="2" Header="Or create a new playlist"
+                 PlaceholderText="Playlist name" />
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10">
+            <ProgressRing x:Name="Busy" Width="20" Height="20" IsActive="False" Visibility="Collapsed" />
+            <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFFF6B6B"
+                       VerticalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</ContentDialog>
