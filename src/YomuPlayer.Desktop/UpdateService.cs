@@ -96,13 +96,45 @@ public static class UpdateService
             return UpdateLaunchResult.ExitApp;
         }
 
-        var psi = new ProcessStartInfo(path)
-        {
-            UseShellExecute = true,
-            Arguments = "/SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /NORESTART /RELAUNCH"
-        };
-        Process.Start(psi);
+        StartInstallerAfterExit(path);
         return UpdateLaunchResult.ExitApp;
+    }
+
+    // The installer must not touch the install folder while this process still has the exe and DLLs mapped.
+    // Start a tiny hidden helper that waits for YOMU to exit before launching setup.
+    private static void StartInstallerAfterExit(string setupPath)
+    {
+        var scriptPath = Path.Combine(AppPaths.UpdatesRoot, "apply-installer-update.ps1");
+        var script = """
+            param(
+                [Parameter(Mandatory=$true)][int]$ProcessId,
+                [Parameter(Mandatory=$true)][string]$SetupPath
+            )
+            $ErrorActionPreference = 'Stop'
+            Wait-Process -Id $ProcessId -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 600
+            Start-Process -FilePath $SetupPath -ArgumentList '/SILENT','/SUPPRESSMSGBOXES','/CLOSEAPPLICATIONS','/NORESTART','/RELAUNCH'
+            """;
+        File.WriteAllText(scriptPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+        var psi = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-WindowStyle");
+        psi.ArgumentList.Add("Hidden");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(scriptPath);
+        psi.ArgumentList.Add("-ProcessId");
+        psi.ArgumentList.Add(Environment.ProcessId.ToString());
+        psi.ArgumentList.Add("-SetupPath");
+        psi.ArgumentList.Add(setupPath);
+        Process.Start(psi);
     }
 
     private static string ResolveManifestSource(bool manual)
