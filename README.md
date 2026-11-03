@@ -38,6 +38,22 @@ Most desktop music clients are a browser in a trench coat. YOMU is not.
   <img src="docs/images/lite.png" width="440" alt="YOMU Player in Lite mode">
 </p>
 
+### The memory receipts
+
+Task Manager, same machine, YouTube Music playing:
+
+| App | Processes | Working set | CPU |
+| --- | ---: | ---: | ---: |
+| Chrome with YouTube Music | 11 | **960.1 MB** | 1.5% |
+| YOMU Player | 1 | **126.4 MB** | 0.2% |
+| YOMU Player in Lite mode | 1 | **26.4 MB** | 0.3% |
+
+<p align="center">
+  <img src="docs/images/ram-comparison.png" width="820" alt="Task Manager comparing Chrome, YOMU Player and YOMU Lite memory use">
+</p>
+
+Not a lab benchmark — just a quick Task Manager check while the same music was playing. But it is a pretty good picture of why the native approach exists.
+
 ## Download
 
 Every release includes two flavours:
