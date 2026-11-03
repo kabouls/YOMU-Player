@@ -127,6 +127,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          name: yomu-pages-nightly
           path: public
 
   deploy:
@@ -142,3 +143,5 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: yomu-pages-nightly
