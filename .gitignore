@@ -3,4 +3,7 @@ obj/
 .vs/
 google-client.json
 dist/
+dump/
+update.ps1
+*.user
 
