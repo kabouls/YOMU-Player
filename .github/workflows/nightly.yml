@@ -77,6 +77,12 @@ jobs:
                 -OutFile "public\$name" -UseBasicParsing
             } catch { }
           }
+          # GitHub Pages has had trouble publishing stable.json for this project.
+          # The stable release carries the same manifest as an asset, so use that as the reliable source.
+          try {
+            Invoke-WebRequest 'https://github.com/kabouls/YOMU-Player/releases/latest/download/stable.json' `
+              -OutFile 'public\stable.json' -UseBasicParsing
+          } catch { }
           $manifest = [ordered]@{
             channel = 'nightly'
             version = $env:VERSION
