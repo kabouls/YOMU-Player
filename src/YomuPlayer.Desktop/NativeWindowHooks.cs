@@ -10,7 +10,15 @@ public sealed class NativeWindowHooks : IDisposable
     public const uint ButtonNext = 102;
 
     private const uint WM_COMMAND = 0x0111;
+    private const uint WM_APPCOMMAND = 0x0319;
     private const uint THBN_CLICKED = 0x1800;
+    private const int APPCOMMAND_MEDIA_NEXTTRACK = 11;
+    private const int APPCOMMAND_MEDIA_PREVTRACK = 12;
+    private const int APPCOMMAND_MEDIA_STOP = 13;
+    private const int APPCOMMAND_MEDIA_PLAY_PAUSE = 14;
+    private const int APPCOMMAND_MEDIA_MUTE = 8;
+    private const int APPCOMMAND_MEDIA_VOLUME_UP = 10;
+    private const int APPCOMMAND_MEDIA_VOLUME_DOWN = 9;
 
     private readonly IntPtr _hwnd;
     private readonly SubclassProc _proc;
@@ -21,6 +29,7 @@ public sealed class NativeWindowHooks : IDisposable
     private bool _playing;
 
     public event Action<uint>? ThumbButtonClicked;
+    public event Action<PlaybackShortcut>? MediaCommand;
 
     public NativeWindowHooks(IntPtr hwnd)
     {
@@ -89,6 +98,27 @@ public sealed class NativeWindowHooks : IDisposable
             if (msg == _taskbarButtonCreated)
             {
                 TryAddButtons();
+            }
+            else if (msg == WM_APPCOMMAND)
+            {
+                var command = (int)((lParam.ToInt64() >> 16) & 0x0FFF);
+                var action = command switch
+                {
+                    APPCOMMAND_MEDIA_NEXTTRACK => PlaybackShortcut.Next,
+                    APPCOMMAND_MEDIA_PREVTRACK => PlaybackShortcut.Previous,
+                    APPCOMMAND_MEDIA_STOP => PlaybackShortcut.Stop,
+                    APPCOMMAND_MEDIA_PLAY_PAUSE => PlaybackShortcut.PlayPause,
+                    APPCOMMAND_MEDIA_MUTE => PlaybackShortcut.Mute,
+                    APPCOMMAND_MEDIA_VOLUME_UP => PlaybackShortcut.VolumeUp,
+                    APPCOMMAND_MEDIA_VOLUME_DOWN => PlaybackShortcut.VolumeDown,
+                    _ => (PlaybackShortcut?)null
+                };
+                var handler = MediaCommand;
+                if (action is not null && handler is not null)
+                {
+                    handler(action.Value);
+                    return IntPtr.Zero;
+                }
             }
             else if (msg == WM_COMMAND)
             {

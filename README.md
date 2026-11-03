@@ -114,12 +114,15 @@ Release/update implementation details: [docs/app-updates.md](docs/app-updates.md
 
 ## Keyboard shortcuts
 
+These work from anywhere in the YOMU window, including when a song card or the search box has focus.
+
 | Keys | Action |
 | --- | --- |
 | `Space` / `K` | Play / pause |
+| `N` / `Shift+N` | Next |
+| `P` / `Shift+P` | Previous |
 | `J` / `L` | Seek 10 s back / forward |
 | `←` / `→` | Seek 5 s |
-| `Shift+N` / `Shift+P` | Next / previous |
 | `M` | Mute |
 | `↑` / `↓` | Volume +/- 5% |
 | `0`–`9` | Jump to 0–90% |
@@ -127,6 +130,27 @@ Release/update implementation details: [docs/app-updates.md](docs/app-updates.md
 | `Alt+←` / `Alt+→` | Back / forward |
 | `Ctrl+V` | Open a copied link |
 | Mouse back/forward | Back / forward |
+
+### Media keys, macros and mouse buttons
+
+YOMU handles the standard media keys and a focused-window fallback set, so hardware media buttons and macro pads work without extra software.
+
+| Shortcut | Action |
+| --- | --- |
+| Media Play/Pause | Play / pause |
+| Media Next | Next |
+| Media Previous | Previous |
+| Media Stop | Pause |
+| `Ctrl+Alt+Space` | Play / pause |
+| `Ctrl+Alt+→` / `Ctrl+Alt+←` | Next / previous |
+| `Ctrl+Alt+↑` / `Ctrl+Alt+↓` | Volume +/- 5% |
+| `Ctrl+Alt+M` | Mute |
+| `Ctrl+Mouse back/forward` | Previous / next |
+| `Ctrl+Middle click` | Play / pause |
+
+Media keys use the Windows SMTC session in the background. The fallback combos and mouse shortcuts are deliberately limited to the focused YOMU window so they don’t steal input from games or other apps.
+
+If your macro software can’t send media keys, bind it to one of the `Ctrl+Alt+…` combinations.
 
 ## Build from source
 

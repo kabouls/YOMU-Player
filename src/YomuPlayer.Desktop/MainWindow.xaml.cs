@@ -20,6 +20,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly SmtcService _smtc;
     private readonly NativeWindowHooks? _hooks;
+    private readonly GlobalShortcuts? _shortcuts;
     private CancellationTokenSource? _suggestCts;
     private string _lastSearchText = "";
     private string? _liteTrackId;
@@ -70,7 +71,11 @@ public sealed partial class MainWindow : Window
         {
             var hooks = _hooks = new NativeWindowHooks(WinRT.Interop.WindowNative.GetWindowHandle(this));
             hooks.ThumbButtonClicked += OnThumbButton;
+            hooks.MediaCommand += OnPlaybackShortcut;
             Bar.Ticked += () => hooks.SetPlaying(AppServices.Player.IsPlaying);
+            _shortcuts = new GlobalShortcuts(
+                () => AppServices.Player.Queue.Current is not null,
+                OnPlaybackShortcut);
         }
 
         AppServices.NavigateRequested += r => DispatcherQueue.TryEnqueue(() => Navigate(r, top: false));
@@ -126,6 +131,7 @@ public sealed partial class MainWindow : Window
         Closed += (_, _) =>
         {
             SaveWindowState();
+            _shortcuts?.Dispose();
             _hooks?.Dispose();
             MemoryTrimmer.Stop();
             AppServices.Shutdown();
@@ -170,6 +176,27 @@ public sealed partial class MainWindow : Window
             case NativeWindowHooks.ButtonPrev: _ = p.PreviousAsync(); break;
             case NativeWindowHooks.ButtonPlayPause: p.TogglePause(); break;
             case NativeWindowHooks.ButtonNext: _ = p.NextAsync(); break;
+        }
+    }
+
+    private void OnPlaybackShortcut(PlaybackShortcut shortcut)
+    {
+        if (!DispatcherQueue.HasThreadAccess)
+        {
+            DispatcherQueue.TryEnqueue(() => OnPlaybackShortcut(shortcut));
+            return;
+        }
+
+        var p = AppServices.Player;
+        switch (shortcut)
+        {
+            case PlaybackShortcut.PlayPause: p.TogglePause(); break;
+            case PlaybackShortcut.Next: _ = p.NextAsync(); break;
+            case PlaybackShortcut.Previous: _ = p.PreviousAsync(); break;
+            case PlaybackShortcut.Stop: if (p.IsPlaying) p.TogglePause(); break;
+            case PlaybackShortcut.Mute: p.ToggleMute(); break;
+            case PlaybackShortcut.VolumeUp: p.Volume += 5; break;
+            case PlaybackShortcut.VolumeDown: p.Volume -= 5; break;
         }
     }
 
@@ -574,10 +601,11 @@ public sealed partial class MainWindow : Window
 
     // ---- keyboard / mouse ----
     // Follows YouTube's published shortcuts (YouTube Music uses the same set):
-    //   Space / K play-pause   J / L -10 s / +10 s   M mute   0-9 jump to 0-90%   / search
-    //   Shift+N next   Shift+P previous   Ctrl+Left/Right seek 5 s   Ctrl+Up/Down volume 5%   Ctrl+V open a copied link
+    //   Space / K play-pause   N/P next/previous   J / L -10 s / +10 s   M mute   0-9 jump to 0-90%   / search
+    //   Shift+N/P next/previous   Ctrl+Left/Right seek 5 s   Ctrl+Up/Down volume 5%   Ctrl+V open a copied link
     // Plain arrows seek/adjust volume only when focus isn't inside the page or sidebar, so list navigation keeps working.
     // Alt+Left / Alt+Right: history back / forward.
+    // Hardware media keys and Ctrl+Alt combos are handled by GlobalShortcuts, with fallbacks here for focus edge cases.
 
     private static bool Down(VirtualKey key) =>
         InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
@@ -590,6 +618,42 @@ public sealed partial class MainWindow : Window
         var shift = Down(VirtualKey.Shift);
         var alt = Down(VirtualKey.Menu);
         var p = AppServices.Player;
+
+        // Native media keys and the fallback global combos work even when a search box or a page control has focus.
+        var media = e.Key switch
+        {
+            (VirtualKey)0xB3 => PlaybackShortcut.PlayPause,
+            (VirtualKey)0xB0 => PlaybackShortcut.Next,
+            (VirtualKey)0xB1 => PlaybackShortcut.Previous,
+            (VirtualKey)0xB2 => PlaybackShortcut.Stop,
+            _ => (PlaybackShortcut?)null
+        };
+        if (media is not null)
+        {
+            OnPlaybackShortcut(media.Value);
+            e.Handled = true;
+            return;
+        }
+
+        if (ctrl && alt)
+        {
+            var combo = e.Key switch
+            {
+                VirtualKey.Space => PlaybackShortcut.PlayPause,
+                VirtualKey.Right => PlaybackShortcut.Next,
+                VirtualKey.Left => PlaybackShortcut.Previous,
+                VirtualKey.Up => PlaybackShortcut.VolumeUp,
+                VirtualKey.Down => PlaybackShortcut.VolumeDown,
+                VirtualKey.M => PlaybackShortcut.Mute,
+                _ => (PlaybackShortcut?)null
+            };
+            if (combo is not null)
+            {
+                OnPlaybackShortcut(combo.Value);
+                e.Handled = true;
+                return;
+            }
+        }
 
         if (alt && !ctrl && e.Key == VirtualKey.Left) { GoBack(); e.Handled = true; return; }
         if (alt && !ctrl && e.Key == VirtualKey.Right) { GoForward(); e.Handled = true; return; }
@@ -623,6 +687,8 @@ public sealed partial class MainWindow : Window
             {
                 case VirtualKey.Space:
                 case VirtualKey.K: p.TogglePause(); break;
+                case VirtualKey.N: _ = p.NextAsync(); break;
+                case VirtualKey.P: _ = p.PreviousAsync(); break;
                 case VirtualKey.J: p.SeekRelative(TimeSpan.FromSeconds(-10)); break;
                 case VirtualKey.L: p.SeekRelative(TimeSpan.FromSeconds(10)); break;
                 case VirtualKey.M: p.ToggleMute(); break;
@@ -662,6 +728,12 @@ public sealed partial class MainWindow : Window
     private void Root_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         var props = e.GetCurrentPoint(RootGrid).Properties;
+        if (Down(VirtualKey.Control))
+        {
+            if (props.IsXButton1Pressed) { OnPlaybackShortcut(PlaybackShortcut.Previous); e.Handled = true; return; }
+            if (props.IsXButton2Pressed) { OnPlaybackShortcut(PlaybackShortcut.Next); e.Handled = true; return; }
+            if (props.IsMiddleButtonPressed) { OnPlaybackShortcut(PlaybackShortcut.PlayPause); e.Handled = true; return; }
+        }
         if (props.IsXButton1Pressed) { GoBack(); e.Handled = true; }
         else if (props.IsXButton2Pressed) { GoForward(); e.Handled = true; }
     }
