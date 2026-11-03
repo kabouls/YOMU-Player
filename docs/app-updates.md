@@ -79,6 +79,28 @@ wrong-channel manifests are rejected.
   - https://kabouls.github.io/YOMU-Player/nightly.json
 - GitHub Pages must use **GitHub Actions** as its source.
 
+## Build packages locally
+
+```powershell
+# Stable
+.\tools\build-channel.ps1 -Channel stable -Version 1.0.0 -ReleaseNotes "Initial stable release."
+
+# Nightly
+.\tools\build-channel.ps1 -Channel nightly -Version 1.0.0-nightly.1 `
+  -FileVersion 1.0.0.1 -ReleaseNotes "Nightly test build."
+```
+
+Outputs:
+
+- `dist\YOMU-Player-Setup-<version>.exe`
+- `dist\YOMU-Player-Portable-<version>.zip`
+- `dist\YOMU-Player-Nightly-Setup-<version>.exe`
+- `dist\YOMU-Player-Nightly-Portable-<version>.zip`
+- `dist\release-<channel>.json`
+
+The installer uses Inno Setup 6.7+ and its built-in dark wizard style. Packages are unsigned until a
+code-signing certificate is configured.
+
 ## Changelog
 
 `changelog.json` is bundled next to the exe:

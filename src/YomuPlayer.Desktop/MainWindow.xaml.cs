@@ -56,7 +56,7 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
 
-        try { AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico")); }
+        try { AppWindow.SetIcon(AppPaths.AppIconPath); }
         catch { /* the exe icon is used instead */ }
 
         _smtc = new SmtcService(this, AppServices.Player);

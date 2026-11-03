@@ -99,7 +99,7 @@ public static class UpdateService
         var psi = new ProcessStartInfo(path)
         {
             UseShellExecute = true,
-            Arguments = "/SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /NORESTART"
+            Arguments = "/SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /NORESTART /RELAUNCH"
         };
         Process.Start(psi);
         return UpdateLaunchResult.ExitApp;

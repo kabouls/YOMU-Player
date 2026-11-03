@@ -23,9 +23,19 @@ public static class ChangelogService
         {
             if (!File.Exists(AppPaths.ChangelogPath)) return Array.Empty<ChangelogEntry>();
             var json = File.ReadAllText(AppPaths.ChangelogPath);
-            var entries = JsonSerializer.Deserialize<List<ChangelogEntry>>(json,
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                var entries = JsonSerializer.Deserialize<List<ChangelogEntry>>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return entries ?? (IReadOnlyList<ChangelogEntry>)Array.Empty<ChangelogEntry>();
+            }
+
+            var single = JsonSerializer.Deserialize<ChangelogEntry>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return entries ?? (IReadOnlyList<ChangelogEntry>)Array.Empty<ChangelogEntry>();
+            return single is null
+                ? (IReadOnlyList<ChangelogEntry>)Array.Empty<ChangelogEntry>()
+                : new[] { single };
         }
         catch (Exception e)
         {

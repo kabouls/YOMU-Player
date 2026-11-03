@@ -11,6 +11,18 @@ public static class AppPaths
     public static string Channel { get; } = ReadChannel();
     public static bool IsNightly => string.Equals(Channel, "nightly", StringComparison.OrdinalIgnoreCase);
     public static bool IsPortable { get; } = File.Exists(Path.Combine(BaseDirectory, "portable.marker"));
+    public static bool IsInstalled => !IsPortable && File.Exists(Path.Combine(BaseDirectory, "installed.marker"));
+
+    public static string AppIconPath
+    {
+        get
+        {
+            var nightly = Path.Combine(BaseDirectory, "Assets", "app-nightly.ico");
+            return IsNightly && File.Exists(nightly)
+                ? nightly
+                : Path.Combine(BaseDirectory, "Assets", "app.ico");
+        }
+    }
 
     public static string ProductName => IsNightly ? "YOMU Player Nightly" : "YOMU Player";
     public static string AppId => IsNightly ? "YOMU.Player.Nightly" : "YOMU.Player";

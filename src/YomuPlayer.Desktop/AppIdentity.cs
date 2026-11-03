@@ -35,8 +35,12 @@ public static class AppIdentity
         // Portable builds leave the shell, Start Menu and protocol handler untouched.
         if (AppPaths.IsPortable) return;
 
-        Try("start menu shortcut", CreateStartMenuShortcut);
-        Try("link scheme", RegisterProtocol);
+        // The installer owns Start Menu and protocol entries so its shortcut choices and uninstall are honored.
+        if (!AppPaths.IsInstalled)
+        {
+            Try("start menu shortcut", CreateStartMenuShortcut);
+            Try("link scheme", RegisterProtocol);
+        }
         Try("app id registry entry", RegisterAppIdEntry);
     }
 
@@ -53,7 +57,7 @@ public static class AppIdentity
         if (exe is null) return;
 
         var shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), DisplayName + ".lnk");
-        var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
+        var icon = AppPaths.AppIconPath;
         var marker = Path.Combine(AppPaths.DataRoot, "shortcut.target");
 
         // A tiny marker avoids opening/saving the .lnk (COM + shell) on every boot. If the exe moved, the marker
@@ -102,7 +106,7 @@ public static class AppIdentity
     {
         using var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\AppUserModelId\" + AppId);
         key.SetValue("DisplayName", DisplayName);
-        var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "app_logo.png");
+        var logo = AppPaths.AppIconPath;
         if (File.Exists(logo)) key.SetValue("IconUri", logo);
     }
 

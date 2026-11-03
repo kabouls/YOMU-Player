@@ -1,0 +1,162 @@
+name: Stable
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Stable version, e.g. 1.0.1'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CHANNEL: stable
+  GOOGLE_CLIENT_JSON: ${{ secrets.GOOGLE_CLIENT_JSON }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq 'workflow_dispatch') {
+            $version = "${{ inputs.version }}".Trim()
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart('v')
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Stable version must look like 1.0.1 (got '$version')."
+          }
+          "VERSION=$version" >> $env:GITHUB_ENV
+          "FILE_VERSION=$version.0" >> $env:GITHUB_ENV
+          "RELEASE_TAG=v$version" >> $env:GITHUB_ENV
+
+      - name: Write OAuth client
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:GOOGLE_CLIENT_JSON)) {
+            throw 'GOOGLE_CLIENT_JSON repository secret is missing.'
+          }
+          Set-Content -Path google-client.json -Value $env:GOOGLE_CLIENT_JSON -Encoding UTF8
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Download yt-dlp
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory tools -Force | Out-Null
+          Invoke-WebRequest 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe' `
+            -OutFile 'tools\yt-dlp.exe' -UseBasicParsing
+
+      - name: Resolve release notes
+        shell: pwsh
+        run: |
+          $notes = (git log -1 --pretty=%s).Trim()
+          if ([string]::IsNullOrWhiteSpace($notes)) { $notes = "YOMU Player $env:VERSION" }
+          "RELEASE_NOTES=$notes" >> $env:GITHUB_ENV
+
+      - name: Build stable packages
+        shell: pwsh
+        run: |
+          .\tools\build-channel.ps1 -Channel stable -Version $env:VERSION `
+            -FileVersion $env:FILE_VERSION -ReleaseNotes $env:RELEASE_NOTES
+
+      - name: Build manifest
+        shell: pwsh
+        run: |
+          $release = Get-Content 'dist\release-stable.json' -Raw | ConvertFrom-Json
+          $setup = Get-Item -LiteralPath $release.setup.path
+          $portable = Get-Item -LiteralPath $release.portable.path
+          $base = "https://github.com/${{ github.repository }}/releases/download/$env:RELEASE_TAG"
+          New-Item -ItemType Directory 'public' -Force | Out-Null
+          foreach ($name in @('stable.json', 'nightly.json')) {
+            try {
+              Invoke-WebRequest "https://kabouls.github.io/YOMU-Player/$name" `
+                -OutFile "public\$name" -UseBasicParsing
+            } catch { }
+          }
+          $manifest = [ordered]@{
+            channel = 'stable'
+            version = $env:VERSION
+            published = [DateTimeOffset]::UtcNow.ToString('o')
+            notes = @($env:RELEASE_NOTES)
+            setup = @{
+              url = "$base/$($setup.Name)"
+              sha256 = $release.setup.sha256
+            }
+            portable = @{
+              url = "$base/$($portable.Name)"
+              sha256 = $release.portable.sha256
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 6 | Set-Content 'public\stable.json' -Encoding UTF8
+
+      - name: Upload stable release
+        shell: pwsh
+        run: |
+          $release = Get-Content 'dist\release-stable.json' -Raw | ConvertFrom-Json
+          $setup = (Get-Item -LiteralPath $release.setup.path).FullName
+          $portable = (Get-Item -LiteralPath $release.portable.path).FullName
+          $title = "YOMU Player $env:VERSION"
+          $exists = $false
+          gh release view $env:RELEASE_TAG --repo ${{ github.repository }} *> $null
+          if ($LASTEXITCODE -eq 0) {
+            $exists = $true
+            gh release edit $env:RELEASE_TAG --repo ${{ github.repository }} --title $title --notes $env:RELEASE_NOTES --latest
+          }
+          if (-not $exists) {
+            gh release create $env:RELEASE_TAG --repo ${{ github.repository }} --target $env:GITHUB_SHA `
+              --title $title --notes $env:RELEASE_NOTES --latest
+          }
+          gh release upload $env:RELEASE_TAG $setup $portable --repo ${{ github.repository }} --clobber
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stable-packages
+          path: |
+            dist/YOMU-Player-Setup-*.exe
+            dist/YOMU-Player-Portable-*.zip
+            dist/release-stable.json
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
