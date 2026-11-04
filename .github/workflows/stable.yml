@@ -72,9 +72,12 @@ jobs:
       - name: Resolve release notes
         shell: pwsh
         run: |
-          $notes = (git log -1 --pretty=%s).Trim()
+          $notes = (git log -1 --pretty=%B).Trim()
           if ([string]::IsNullOrWhiteSpace($notes)) { $notes = "YOMU Player $env:VERSION" }
-          "RELEASE_NOTES=$notes" >> $env:GITHUB_ENV
+          $delimiter = 'YOMU_NOTES_EOF'
+          "RELEASE_NOTES<<$delimiter" >> $env:GITHUB_ENV
+          $notes >> $env:GITHUB_ENV
+          $delimiter >> $env:GITHUB_ENV
 
       - name: Build stable packages
         shell: pwsh
@@ -100,7 +103,7 @@ jobs:
             channel = 'stable'
             version = $env:VERSION
             published = [DateTimeOffset]::UtcNow.ToString('o')
-            notes = @($env:RELEASE_NOTES)
+            notes = @($env:RELEASE_NOTES -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
             setup = @{
               url = "$base/$($setup.Name)"
               sha256 = $release.setup.sha256

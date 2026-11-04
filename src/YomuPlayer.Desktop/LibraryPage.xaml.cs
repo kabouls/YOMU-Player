@@ -2,15 +2,20 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using System.Collections.ObjectModel;
 using YomuPlayer.Core;
 
 namespace YomuPlayer.Desktop;
 
-// Account entry point: sign in with Google, then open liked songs or the account's playlists.
+// Account entry point: profile, playlists, and local listening history.
 public sealed partial class LibraryPage : Page
 {
     private readonly DispatcherQueue _ui = DispatcherQueue.GetForCurrentThread();
     private CancellationTokenSource? _signInCts;
+    private bool _loading;
+
+    public ObservableCollection<ItemVM> Playlists { get; } = new();
+    public ObservableCollection<ItemVM> HistoryRows { get; } = new();
 
     public LibraryPage()
     {
@@ -21,17 +26,23 @@ public sealed partial class LibraryPage : Page
     {
         base.OnNavigatedTo(e);
         AppServices.Auth.Changed += OnAuthChanged;
+        AppServices.LibraryChanged += OnLibraryChanged;
+        PlaybackHistory.Changed += OnHistoryChanged;
         RefreshUi();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         AppServices.Auth.Changed -= OnAuthChanged;
+        AppServices.LibraryChanged -= OnLibraryChanged;
+        PlaybackHistory.Changed -= OnHistoryChanged;
         _signInCts?.Cancel();
         base.OnNavigatedFrom(e);
     }
 
     private void OnAuthChanged() => _ui.TryEnqueue(RefreshUi);
+    private void OnLibraryChanged() => _ui.TryEnqueue(() => _ = LoadLibraryAsync());
+    private void OnHistoryChanged() => _ui.TryEnqueue(FillHistory);
 
     private void RefreshUi()
     {
@@ -51,12 +62,88 @@ public sealed partial class LibraryPage : Page
             Avatar.DisplayName = NameText.Text;
             Avatar.Initials = Initials(NameText.Text);
             Avatar.ProfilePicture = Thumbnails.Create(auth.PhotoUrl, 112);
+            _ = LoadLibraryAsync();
         }
         else
         {
+            Playlists.Clear();
+            HistoryRows.Clear();
+            PlaylistsEmpty.Visibility = Visibility.Collapsed;
+            HistoryEmpty.Visibility = Visibility.Collapsed;
             ResetClientLink.Visibility = auth.HasClient ? Visibility.Visible : Visibility.Collapsed;
             if (string.IsNullOrEmpty(SignInStatus.Text))
                 SignInStatus.Text = auth.HasClient ? "" : "One-time Google Cloud setup is needed first.";
+        }
+    }
+
+    private async Task LoadLibraryAsync()
+    {
+        if (_loading || !AppServices.Auth.IsSignedIn) return;
+        _loading = true;
+        try
+        {
+            var playlists = await AppServices.GetLibraryPlaylistsAsync();
+            Playlists.Clear();
+            foreach (var playlist in playlists) Playlists.Add(new ItemVM(playlist));
+            PlaylistsEmpty.Visibility = Playlists.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            FillHistory();
+        }
+        catch (Exception ex)
+        {
+            AppServices.ReportError(ex.Message);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void FillHistory()
+    {
+        HistoryRows.Clear();
+        foreach (var entry in PlaybackHistory.Items.Take(20))
+        {
+            var track = PlaybackHistory.ToTrack(entry);
+            var subtitle = string.IsNullOrWhiteSpace(entry.Album) ? entry.Artists : $"{entry.Artists} • {entry.Album}";
+            HistoryRows.Add(new ItemVM(new MediaItem(MediaKind.Song, entry.Title, subtitle,
+                entry.ThumbnailUrl, VideoId: entry.VideoId, Track: track)));
+        }
+        HistoryEmpty.Visibility = HistoryRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void NewPlaylist_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new CreatePlaylistDialog();
+            if (await Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
+            await AppServices.CreatePlaylistAsync(dialog.PlaylistName);
+            await LoadLibraryAsync();
+        }
+        catch (Exception ex)
+        {
+            AppServices.ReportError(ex.Message);
+        }
+    }
+
+    private async void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Clear local history?",
+            Content = new TextBlock
+            {
+                Text = "This clears the play history stored on this PC. Your YouTube account history is not touched.",
+                TextWrapping = TextWrapping.Wrap
+            },
+            PrimaryButtonText = "Clear",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary)
+        {
+            PlaybackHistory.Clear();
+            FillHistory();
         }
     }
 

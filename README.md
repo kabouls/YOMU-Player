@@ -76,7 +76,9 @@ Requirements: **Windows 10 1809+ or Windows 11, x64**.
 ## What it does
 
 - **Home / Explore / Search** — Home, quick picks for signed-out users, For You and Liked Music for signed-in users, Explore shelves, rich search results.
-- **Your library** — Liked Music, liked songs, playlists and playlist editing through the YouTube Data API.
+- **Discovery rows** — “Because you liked X” plus a second “More like X” row that deliberately leaves X out. Pick a mood/genre to add a manual genre row to Home.
+- **Your library** — Liked Music, liked songs, a playlist card grid, playlist editing, and a **local** recently-played history. History is stored on this PC only; it is not your YouTube account history.
+- **Region-aware Explore** — Auto, Worldwide (no country filter), or a specific country for charts, new releases and browse shelves.
 - **Playback** — song radio, album/playlist queues, autoplay, shuffle, repeat, quality selection, prefetching the next track.
 - **Player page** — large artwork, a proper **Up next** queue and **Lyrics**, with the library sidebar still visible.
 - **Like / dislike** — synced with your YouTube account. Disliking skips the song and keeps it out of generated recommendations and queues.

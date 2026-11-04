@@ -9,6 +9,14 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Padding="28,8,28,24" Spacing="8">
                 <TextBlock x:Name="PageTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+
+                <StackPanel x:Name="RegionPanel" Orientation="Horizontal" Spacing="10" Visibility="Collapsed"
+                            VerticalAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock Text="Region" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ComboBox x:Name="RegionBox" Width="280" SelectionChanged="RegionBox_SelectionChanged" />
+                </StackPanel>
+
                 <TextBlock x:Name="EmptyText" Text="Nothing to show here." Visibility="Collapsed"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 

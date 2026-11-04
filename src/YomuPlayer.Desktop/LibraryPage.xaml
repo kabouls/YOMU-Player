@@ -62,9 +62,46 @@
                             Style="{StaticResource AccentButtonStyle}" Foreground="White" Padding="18,10">
                         <TextBlock Text="Liked songs" Foreground="White" />
                     </Button>
-                    <Button x:Name="PlaylistsButton" Content="Your playlists" Click="Playlists_Click" Padding="18,10" />
                     <Button Content="Sign out" Click="SignOut_Click" />
                 </StackPanel>
+
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Your playlists" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    <Button Grid.Column="1" Content="New playlist" Click="NewPlaylist_Click" />
+                </Grid>
+
+                <ItemsRepeater ItemsSource="{x:Bind Playlists}" ItemTemplate="{StaticResource CardTemplate}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout Orientation="Horizontal" MinItemWidth="190" MinItemHeight="250"
+                                           MinRowSpacing="8" MinColumnSpacing="8" ItemsStretch="Fill" />
+                    </ItemsRepeater.Layout>
+                </ItemsRepeater>
+                <TextBlock x:Name="PlaylistsEmpty" Text="No playlists yet. Create one above."
+                           Visibility="Collapsed" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                <Grid ColumnSpacing="12" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Recently played" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    <Button Grid.Column="1" Content="Clear" Click="ClearHistory_Click" />
+                </Grid>
+                <TextBlock Text="Local to this PC — not synced with your YouTube account history."
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" />
+                <ItemsRepeater ItemsSource="{x:Bind HistoryRows}" ItemTemplate="{StaticResource ListItemTemplate}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout Orientation="Horizontal" MinItemWidth="360" MinItemHeight="64"
+                                           MinRowSpacing="4" MinColumnSpacing="12" ItemsStretch="Fill" />
+                    </ItemsRepeater.Layout>
+                </ItemsRepeater>
+                <TextBlock x:Name="HistoryEmpty" Text="Nothing played yet."
+                           Visibility="Collapsed" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
                 <TextBlock TextWrapping="Wrap" MaxWidth="640"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"

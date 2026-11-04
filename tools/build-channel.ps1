@@ -97,11 +97,15 @@ if (Test-Path $changelogPath) {
     } catch { $entries = @() }
 }
 if (-not ($entries | Where-Object { $_.version -eq $Version })) {
+    $noteLines = @($ReleaseNotes -split "\r?\n" |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -and $_ -notmatch '^[-*]\s*$' })
+    if ($noteLines.Count -eq 0) { $noteLines = @("YOMU Player $Version") }
     $entry = [ordered]@{
         version = $Version
         date = (Get-Date -Format 'yyyy-MM-dd')
         channel = $Channel
-        notes = @($ReleaseNotes)
+        notes = $noteLines
     }
     $entries = @($entry) + $entries
 }

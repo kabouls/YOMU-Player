@@ -27,7 +27,7 @@ public static class AppServices
     private sealed record ForYouDiskCache(DateTimeOffset At, List<Shelf> Shelves);
 
     private static string ForYouDiskPath(bool shuffle) => Path.Combine(
-        AppPaths.DataRoot, shuffle ? "foryou-shuffle.json" : "foryou-default.json");
+        AppPaths.DataRoot, shuffle ? "foryou-shuffle-v2.json" : "foryou-default-v2.json");
     private static readonly object LikedGate = new();
     private static Task<IReadOnlyList<Track>>? _likedTask;
     private static DateTime _likedAt;
@@ -87,6 +87,7 @@ public static class AppServices
     {
         Audio = new VlcAudioPlayer();
         var settings = AppSettings.Current;
+        Yt.Country = RegionCode(settings.Region);
         Player = new PlayerService(new StreamResolver(), Audio)
         {
             Volume = settings.Volume is > 0 and <= 100 ? settings.Volume : 70,
@@ -95,6 +96,7 @@ public static class AppServices
             RadioProvider = async seed => FilterDisliked(await Yt.GetRadioAsync(seed.VideoId)),
             QueueTitleProvider = track => Yt.TryGetCachedExtras(track.VideoId)?.QueueTitle
         };
+        Player.TrackChanged += track => { if (track is not null) PlaybackHistory.Record(track); };
 
         LocalDevice = new LocalPlaybackEndpoint(Player, Environment.MachineName);
         DeviceList.Clear();
@@ -126,6 +128,75 @@ public static class AppServices
         LibraryPlaylistsAt = default;
         _libraryPlaylistsLoaded = false;
         try { File.Delete(LibraryPlaylistsDiskPath); } catch { /* optional cache */ }
+    }
+
+    public static void SetRegion(string region)
+    {
+        AppSettings.Current.Region = string.IsNullOrWhiteSpace(region) ? "auto" : region;
+        AppSettings.Save();
+        Yt.Country = RegionCode(AppSettings.Current.Region);
+        lock (PageCache) PageCache.Clear();
+        lock (SearchCache) SearchCache.Clear();
+        lock (CollectionCache) CollectionCache.Clear();
+        lock (CollectionPageCache) CollectionPageCache.Clear();
+        ClearForYouCache();
+    }
+
+    public static string CurrentRegionLabel
+    {
+        get
+        {
+            var setting = AppSettings.Current.Region;
+            if (string.Equals(setting, "worldwide", StringComparison.OrdinalIgnoreCase)) return "Worldwide";
+            if (string.Equals(setting, "auto", StringComparison.OrdinalIgnoreCase))
+                return "Auto (" + (RegionCode("auto") ?? "system") + ")";
+            return setting.ToUpperInvariant();
+        }
+    }
+
+    private static string? RegionCode(string? setting)
+    {
+        if (string.Equals(setting, "worldwide", StringComparison.OrdinalIgnoreCase)) return null;
+        if (!string.IsNullOrWhiteSpace(setting) && !string.Equals(setting, "auto", StringComparison.OrdinalIgnoreCase))
+            return setting.Trim().ToUpperInvariant();
+        try
+        {
+            var code = System.Globalization.RegionInfo.CurrentRegion.TwoLetterISORegionName;
+            return code.Length == 2 ? code.ToUpperInvariant() : "US";
+        }
+        catch
+        {
+            return "US";
+        }
+    }
+
+    public static async Task<IReadOnlyList<MediaItem>> GetGenresAsync()
+    {
+        // The moods page is two chip shelves: moods/moments plus genres.
+        var page = await GetBrowseAsync("FEmusic_moods_and_genres", null);
+        return page.Shelves
+            .SelectMany(s => s.Items)
+            .Where(i => i.Kind == MediaKind.Nav && !string.IsNullOrWhiteSpace(i.BrowseId))
+            .GroupBy(i => i.Title)
+            .Select(g => g.First())
+            .OrderBy(i => i.Title)
+            .ToList();
+    }
+
+    public static void SetGenre(MediaItem? genre)
+    {
+        AppSettings.Current.GenreTitle = genre?.Title;
+        AppSettings.Current.GenreBrowseId = genre?.BrowseId;
+        AppSettings.Current.GenreParams = genre?.BrowseParams;
+        AppSettings.Save();
+    }
+
+    public static async Task<IReadOnlyList<Shelf>> GetGenreShelvesAsync()
+    {
+        var settings = AppSettings.Current;
+        if (string.IsNullOrWhiteSpace(settings.GenreBrowseId)) return Array.Empty<Shelf>();
+        var page = await GetBrowseAsync(settings.GenreBrowseId, settings.GenreParams);
+        return page.Shelves.Take(2).ToList();
     }
 
     public static async Task<IReadOnlyList<MediaItem>> GetLibraryPlaylistsAsync(bool refresh = false)
@@ -550,11 +621,13 @@ public static class AppServices
 
         foreach (var (candidate, seed, radio) in radios)
         {
-            var picked = PickForYou(radio, seed.VideoId, 10, 2, shuffle);
+            var isSecond = ReferenceEquals(candidate, seeds.Count > 1 ? seeds[1].Candidate : null);
+            var picked = PickForYou(radio, seed.VideoId, 10, 2, shuffle, isSecond ? candidate.Artist : null);
             if (picked.Count == 0) continue;
 
-            shelves.Add(new Shelf($"Because you liked {candidate.Artist}", ShelfStyle.Cards,
-                picked.Select(ToMedia).ToList()));
+            var displayArtist = DisplayArtist(candidate.Artist);
+            var title = isSecond ? $"More like {displayArtist}" : $"Because you liked {displayArtist}";
+            shelves.Add(new Shelf(title, ShelfStyle.Cards, picked.Select(ToMedia).ToList()));
         }
 
         var more = new List<Track>();
@@ -595,7 +668,8 @@ public static class AppServices
     }
 
     private static IReadOnlyList<Track> PickForYou(
-        IReadOnlyList<Track> source, string seedId, int max, int perArtist, bool shuffle)
+        IReadOnlyList<Track> source, string seedId, int max, int perArtist, bool shuffle,
+        string? excludeArtist = null)
     {
         var ordered = shuffle
             ? source.Where(t => !IsDisliked(t.VideoId)).OrderBy(_ => Random.Shared.Next()).ToList()
@@ -603,10 +677,13 @@ public static class AppServices
         var seen = new HashSet<string> { seedId };
         var counts = new Dictionary<string, int>();
         var result = new List<Track>();
+        var excluded = NormalizeArtist(excludeArtist);
 
         foreach (var track in ordered)
         {
             if (!seen.Add(track.VideoId)) continue;
+            if (excluded.Length > 0 && track.Artists.Any(a => NormalizeArtist(a.Name) == excluded))
+                continue;
             var artist = track.Artists.FirstOrDefault()?.Name ?? "";
             counts.TryGetValue(artist, out var count);
             if (count >= perArtist) continue;
@@ -616,6 +693,15 @@ public static class AppServices
         }
         return result;
     }
+
+    private static string NormalizeArtist(string? artist)
+    {
+        if (string.IsNullOrWhiteSpace(artist)) return "";
+        return DisplayArtist(artist).ToLowerInvariant();
+    }
+
+    private static string DisplayArtist(string artist) =>
+        artist.Replace(" - Topic", "", StringComparison.OrdinalIgnoreCase).Trim();
 
     private static MediaItem ToMedia(Track track) =>
         new(MediaKind.Song, track.Title, track.ArtistLine, track.ThumbnailUrl,
