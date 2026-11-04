@@ -311,7 +311,30 @@ internal static class VersionUtil
 
         if (aPre is null) return bPre is null ? 0 : 1;
         if (bPre is null) return -1;
-        return string.Compare(aPre, bPre, StringComparison.OrdinalIgnoreCase);
+        return ComparePre(aPre, bPre);
+    }
+
+    // Semver-style prerelease ordering: nightly.9 is older than nightly.10 (plain string
+    // comparison would put ".11" before ".9" and hide newer nightlies).
+    private static int ComparePre(string a, string b)
+    {
+        var ap = a.Split('.');
+        var bp = b.Split('.');
+        for (var i = 0; i < Math.Min(ap.Length, bp.Length); i++)
+        {
+            var aNumeric = int.TryParse(ap[i], out var aNumber);
+            var bNumeric = int.TryParse(bp[i], out var bNumber);
+            if (aNumeric && bNumeric)
+            {
+                var number = aNumber.CompareTo(bNumber);
+                if (number != 0) return number;
+                continue;
+            }
+            if (aNumeric != bNumeric) return aNumeric ? -1 : 1;
+            var text = string.Compare(ap[i], bp[i], StringComparison.OrdinalIgnoreCase);
+            if (text != 0) return text;
+        }
+        return ap.Length.CompareTo(bp.Length);
     }
 
     private static (string Core, string? Pre) Split(string version)
