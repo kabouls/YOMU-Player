@@ -12,6 +12,7 @@ public sealed partial class HomePage : Page
 {
     private readonly List<Track> _likedTracks = new();
     private bool _shuffle;
+    private DateTime _lastLoadedAt = DateTime.MinValue;
 
     public ObservableCollection<ShelfVM> ForYouShelves { get; } = new();
     public ObservableCollection<ShelfVM> MoreShelves { get; } = new();
@@ -29,7 +30,15 @@ public sealed partial class HomePage : Page
         AppServices.TrackRemoved += OnTrackRemoved;
         AppServices.LikedMusicChanged += OnLikedMusicChanged;
         NotInterested.Changed += OnNotInterestedChanged;
+
+        // Home keeps its visual tree while the user opens a song or another tab. Reuse it briefly
+        // instead of rebuilding every card and firing another batch of image decodes on the UI thread.
+        if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(20) &&
+            (ForYouShelves.Count > 0 || MoreShelves.Count > 0))
+            return;
+
         await LoadAsync();
+        _lastLoadedAt = DateTime.UtcNow;
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)

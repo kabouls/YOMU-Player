@@ -81,8 +81,10 @@ public sealed partial class MainWindow : Window
                 OnPlaybackShortcut);
         }
 
-        AppServices.NavigateRequested += r => DispatcherQueue.TryEnqueue(() => Navigate(r, top: false));
-        AppServices.PlayerRequested += tab => DispatcherQueue.TryEnqueue(() => OpenPlayer(tab));
+        AppServices.NavigateRequested += r =>
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => Navigate(r, top: false));
+        AppServices.PlayerRequested += tab =>
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => OpenPlayer(tab));
         AppServices.ErrorRaised += m => DispatcherQueue.TryEnqueue(() => ShowError(m));
         AppServices.InfoRaised += m => DispatcherQueue.TryEnqueue(() => ShowInfo(m));
         AppServices.Auth.Changed += () => DispatcherQueue.TryEnqueue(() =>

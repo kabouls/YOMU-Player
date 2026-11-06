@@ -93,7 +93,7 @@ public sealed class ItemVM
         {
             if (!_artLoaded)
             {
-                _art = Thumbnails.Create(Item.ThumbnailUrl, 320);
+                _art = Thumbnails.Create(Item.ThumbnailUrl, 256);
                 _artLoaded = true;
             }
             return _art;
