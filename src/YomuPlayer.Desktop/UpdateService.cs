@@ -70,7 +70,9 @@ public static class UpdateService
         Directory.CreateDirectory(AppPaths.UpdatesRoot);
         var kind = AppPaths.IsPortable ? "portable" : "setup";
         var extension = AppPaths.IsPortable ? ".zip" : ".exe";
-        var path = Path.Combine(AppPaths.UpdatesRoot, $"YOMU-Player-{kind}-{info.Version}{extension}");
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Environment.ProcessId;
+        var path = Path.Combine(AppPaths.UpdatesRoot,
+            $"YOMU-Player-{kind}-{info.Version}-{stamp}{extension}");
         var temp = path + ".part";
 
         try
@@ -82,7 +84,7 @@ public static class UpdateService
                 if (!string.Equals(actual, asset.Sha256.Trim(), StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("The downloaded update failed its SHA-256 check.");
             }
-            File.Move(temp, path, overwrite: true);
+            File.Move(temp, path);
         }
         catch
         {
@@ -104,14 +106,16 @@ public static class UpdateService
     // Start a tiny hidden helper that waits for YOMU to exit before launching setup.
     private static void StartInstallerAfterExit(string setupPath)
     {
-        var scriptPath = Path.Combine(AppPaths.UpdatesRoot, "apply-installer-update.ps1");
+        var scriptPath = Path.Combine(AppPaths.UpdatesRoot,
+            "apply-installer-update-" + Guid.NewGuid().ToString("N") + ".ps1");
         var script = """
             param(
                 [Parameter(Mandatory=$true)][int]$ProcessId,
                 [Parameter(Mandatory=$true)][string]$SetupPath
             )
             $ErrorActionPreference = 'Stop'
-            Wait-Process -Id $ProcessId -ErrorAction SilentlyContinue
+            Wait-Process -Id $ProcessId -Timeout 120 -ErrorAction SilentlyContinue
+            if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) { exit 1 }
             Start-Sleep -Milliseconds 600
             Start-Process -FilePath $SetupPath -ArgumentList '/SILENT','/SUPPRESSMSGBOXES','/CLOSEAPPLICATIONS','/NORESTART','/RELAUNCH'
             """;
@@ -246,7 +250,8 @@ public static class UpdateService
     // to exit, unpacks the portable zip over the app folder while keeping data, then relaunches the app.
     private static void StartPortableUpdater(string zipPath)
     {
-        var scriptPath = Path.Combine(AppPaths.UpdatesRoot, "apply-portable-update.ps1");
+        var scriptPath = Path.Combine(AppPaths.UpdatesRoot,
+            "apply-portable-update-" + Guid.NewGuid().ToString("N") + ".ps1");
         var script = """
             param(
                 [Parameter(Mandatory=$true)][int]$ProcessId,
@@ -255,7 +260,8 @@ public static class UpdateService
                 [Parameter(Mandatory=$true)][string]$ExeName
             )
             $ErrorActionPreference = 'Stop'
-            Wait-Process -Id $ProcessId -ErrorAction SilentlyContinue
+            Wait-Process -Id $ProcessId -Timeout 120 -ErrorAction SilentlyContinue
+            if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) { exit 1 }
             Start-Sleep -Milliseconds 700
             $stage = Join-Path $env:TEMP ('YomuUpdate-' + [guid]::NewGuid().ToString('N'))
             try {
