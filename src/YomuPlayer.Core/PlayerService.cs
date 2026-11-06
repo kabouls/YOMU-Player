@@ -24,6 +24,35 @@ public sealed class PlayerService : IDisposable
     public PlaybackQueue Queue { get; }
     public AudioQuality Quality { get; set; } = AudioQuality.Balanced;
 
+    private readonly List<Track> _sessionHistory = new();
+    private Track? _lastStartedTrack;
+    private const int MaxSessionHistory = 20;
+
+    // Songs already played in this session, oldest to newest. This survives radio/queue replacement,
+    // so the player page can show what led up to the current song.
+    public IReadOnlyList<Track> SessionHistory
+    {
+        get
+        {
+            lock (_sessionHistory) return _sessionHistory.ToList();
+        }
+    }
+
+    private void RememberStart(Track track)
+    {
+        lock (_sessionHistory)
+        {
+            if (_lastStartedTrack?.VideoId == track.VideoId) return;
+            if (_lastStartedTrack is { } previous)
+            {
+                _sessionHistory.Add(previous);
+                if (_sessionHistory.Count > MaxSessionHistory)
+                    _sessionHistory.RemoveAt(0);
+            }
+            _lastStartedTrack = track;
+        }
+    }
+
     // Supplies "more like this" tracks. Used for song radio on click and for endless playback when the queue runs out.
     public Func<Track, Task<IReadOnlyList<Track>>>? RadioProvider { get; set; }
 
@@ -228,6 +257,7 @@ public sealed class PlayerService : IDisposable
             return;
         }
 
+        RememberStart(track);
         if (!isRetry) _retriedVideoId = null;
 
         CancellationTokenSource cts;

@@ -28,6 +28,7 @@ public sealed partial class HomePage : Page
         base.OnNavigatedTo(e);
         AppServices.TrackRemoved += OnTrackRemoved;
         AppServices.LikedMusicChanged += OnLikedMusicChanged;
+        NotInterested.Changed += OnNotInterestedChanged;
         await LoadAsync();
     }
 
@@ -35,8 +36,15 @@ public sealed partial class HomePage : Page
     {
         AppServices.TrackRemoved -= OnTrackRemoved;
         AppServices.LikedMusicChanged -= OnLikedMusicChanged;
+        NotInterested.Changed -= OnNotInterestedChanged;
         base.OnNavigatedFrom(e);
     }
+
+    private void OnNotInterestedChanged() => DispatcherQueue.TryEnqueue(() =>
+    {
+        _ = LoadForYouAsync();
+        _ = LoadGenreAsync();
+    });
 
     private async Task LoadAsync()
     {

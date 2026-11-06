@@ -80,13 +80,14 @@ Requirements: **Windows 10 1809+ or Windows 11, x64**.
 - **Your library** — Liked Music, liked songs, a playlist card grid, playlist editing, and a **local** recently-played history. History is stored on this PC only; it is not your YouTube account history.
 - **Region-aware Explore** — Auto, Worldwide (no country filter), or a specific country for charts, new releases and browse shelves.
 - **Playback** — song radio, album/playlist queues, autoplay, shuffle, repeat, quality selection, prefetching the next track.
-- **Player page** — large artwork, a proper **Up next** queue and **Lyrics**, with the library sidebar still visible.
-- **Like / dislike** — synced with your YouTube account. Disliking skips the song and keeps it out of generated recommendations and queues.
-- **Lite mode** — tiny player that still handles transport, shuffle, repeat and volume.
+- **Player page** — opens automatically on an explicit play, with large artwork, a proper **Up next** queue (including the current session’s previously played songs) and **Lyrics**, with the library sidebar still visible.
+- **Like / dislike** — synced with your YouTube account. Disliking skips the song and keeps it out of generated recommendations and queues. A separate local **Not interested** action hides a Home recommendation for a week without changing your account.
+- **Lite mode** — tiny player that still handles transport, shuffle, repeat, volume, devices, settings and a text-only Up Next strip.
 - **Windows integration** — media keys and the volume flyout through SMTC, taskbar thumbnail buttons, single-instance `yomu://` links.
 - **Paste a link** — paste a YouTube Music or YouTube link and the app previews what it will open first.
 - **In-app updates** — a small **Update available** chip appears when a new build is ready. It downloads, verifies SHA-256, applies the update and shows the changelog once.
 - **Changelog** — every release is listed in **Profile → Changelog**.
+- **Radio variety** — radio queues are rotated and mix in related tracks instead of returning the identical order every time.
 
 ## Install
 

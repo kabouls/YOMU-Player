@@ -113,7 +113,10 @@ public sealed partial class PlayerPage : Page
         var track = _player.Queue.Current;
         var changed = track?.VideoId != _shownTrackId;
 
-        CoverBrush.ImageSource = Thumbnails.Create(track?.ThumbnailUrl, 640);
+        var artPixels = (int)Math.Clamp(
+            Math.Max(LeftPane.ActualWidth, 900) * (XamlRoot?.RasterizationScale ?? 1.0),
+            900, 1400);
+        CoverBrush.ImageSource = Thumbnails.Create(track?.ThumbnailUrl, artPixels);
         ArtPlaceholder.Visibility = string.IsNullOrEmpty(track?.ThumbnailUrl)
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -155,12 +158,16 @@ public sealed partial class PlayerPage : Page
 
         var upcoming = _player.Queue.Upcoming();
         QueueRows.Clear();
+        foreach (var previous in _player.SessionHistory.Where(t => !AppServices.IsDisliked(t.VideoId)))
+            QueueRows.Add(new QueueRowVM(previous, () => PlayHistoryAsync(previous)));
         foreach (var entry in upcoming)
             QueueRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, entry.IsCurrent, PlayAtAsync));
 
         UpdateQueueSource();
-        QueueEmpty.Visibility = upcoming.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        QueueEmpty.Visibility = QueueRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    private Task PlayHistoryAsync(Track track) => _player.PlayTrackWithRadioAsync(track);
 
     private void UpdateQueueSource()
     {
@@ -184,6 +191,7 @@ public sealed partial class PlayerPage : Page
 
         ContextMenus.Show(row, ContextMenus.FromTrack(vm.Track), position, flyout =>
         {
+            if (vm.IsHistory) return;
             flyout.Items.Add(new MenuFlyoutSeparator());
             var remove = new MenuFlyoutItem
             {

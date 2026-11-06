@@ -11,6 +11,6 @@
 
     <StackPanel Width="380" Spacing="8">
         <TextBox x:Name="NameBox" Header="Playlist name" PlaceholderText="My playlist" />
-        <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFFF6B6B" />
+        <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFE8E8E8" />
     </StackPanel>
 </ContentDialog>

@@ -144,7 +144,7 @@
                                Style="{ThemeResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
                     <ToggleButton x:Name="LiteShuffle" Click="LiteShuffle_Click" Width="44" Height="44"
                                   MinWidth="0" Padding="0" Background="Transparent" BorderThickness="0">
                         <FontIcon Glyph="&#xE8B1;" />
@@ -187,26 +187,58 @@
                     </Button>
                 </StackPanel>
 
-                <!-- Volume, so lite mode does not need the full bar -->
-                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <Button x:Name="LiteMute" Click="LiteMute_Click" Style="{StaticResource SubtleButtonStyle}"
-                            Width="36" Height="36" ToolTipService.ToolTip="Mute">
-                        <FontIcon x:Name="LiteVolumeIcon" Glyph="&#xE767;" FontSize="14" />
-                    </Button>
-                    <Slider x:Name="LiteVolume" Width="176" Minimum="0" Maximum="100" Value="70"
-                            ValueChanged="LiteVolume_ValueChanged"
-                            AutomationProperties.AutomationId="LiteVolume">
-                        <Slider.Resources>
-                            <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFFFF" />
-                            <SolidColorBrush x:Key="SliderOuterThumbBackground" Color="#FFFFFFFF" />
-                            <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#00FFFFFF" />
-                        </Slider.Resources>
-                    </Slider>
-                    <TextBlock x:Name="LiteVolumeText" Text="70" Width="26" VerticalAlignment="Center"
-                               TextAlignment="Right" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
+                <!-- Volume on the left, device/settings on the right. -->
+                <Grid ColumnSpacing="8" HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                        <Button x:Name="LiteMute" Click="LiteMute_Click" Style="{StaticResource SubtleButtonStyle}"
+                                Width="36" Height="36" ToolTipService.ToolTip="Mute">
+                            <FontIcon x:Name="LiteVolumeIcon" Glyph="&#xE767;" FontSize="14" />
+                        </Button>
+                        <Slider x:Name="LiteVolume" Width="142" Height="32" Padding="8,0" Minimum="0" Maximum="100" Value="70"
+                                VerticalAlignment="Center" ValueChanged="LiteVolume_ValueChanged"
+                                PointerWheelChanged="LiteVolume_PointerWheelChanged"
+                                AutomationProperties.AutomationId="LiteVolume">
+                            <Slider.Resources>
+                                <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFFFF" />
+                                <SolidColorBrush x:Key="SliderOuterThumbBackground" Color="#FFFFFFFF" />
+                                <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#00FFFFFF" />
+                            </Slider.Resources>
+                        </Slider>
+                        <TextBlock x:Name="LiteVolumeText" Text="70" Width="26" VerticalAlignment="Center"
+                                   TextAlignment="Right" Style="{ThemeResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <Button x:Name="LiteDevices" Click="LiteDevices_Click" Style="{StaticResource SubtleButtonStyle}"
+                                Width="36" Height="36" ToolTipService.ToolTip="Playback devices"
+                                AutomationProperties.AutomationId="LiteDevices">
+                            <FontIcon Glyph="&#xE772;" FontSize="14" />
+                        </Button>
+                        <Button x:Name="LiteSettings" Click="LiteSettings_Click" Style="{StaticResource SubtleButtonStyle}"
+                                Width="36" Height="36" ToolTipService.ToolTip="Settings"
+                                AutomationProperties.AutomationId="LiteSettings">
+                            <FontIcon Glyph="&#xE713;" FontSize="14" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <ItemsControl x:Name="LiteUpNext" ItemsSource="{x:Bind LiteUpNextRows}" Margin="0,2,0,0"
+                              MaxHeight="70">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:QueueRowVM">
+                            <TextBlock Text="{x:Bind Title}" FontSize="11" MaxLines="1"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Grid>
     </Grid>

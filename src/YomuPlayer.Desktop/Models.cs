@@ -26,13 +26,28 @@ public static class Thumbnails
 {
     // Googleusercontent art URLs carry their size in the URL (=w226-h226-... or =s192); ask for what we draw.
     private static readonly Regex Size = new(@"=(w\d+-h\d+|s\d+)", RegexOptions.Compiled);
+    private static readonly Dictionary<string, WeakReference<ImageSource>> Cache = new(StringComparer.Ordinal);
+    private static readonly object Gate = new();
 
     public static ImageSource? Create(string? url, int px)
     {
         if (string.IsNullOrEmpty(url)) return null;
         var resized = Size.Replace(url, m => m.Groups[1].Value.StartsWith("w") ? $"=w{px}-h{px}" : $"=s{px}");
         if (!Uri.TryCreate(resized, UriKind.Absolute, out var uri)) return null;
-        return new BitmapImage(uri) { DecodePixelWidth = px };
+
+        lock (Gate)
+        {
+            if (Cache.TryGetValue(resized, out var weak) && weak.TryGetTarget(out var cached))
+                return cached;
+            if (Cache.Count > 240)
+            {
+                foreach (var key in Cache.Where(kv => !kv.Value.TryGetTarget(out _)).Select(kv => kv.Key).ToList())
+                    Cache.Remove(key);
+            }
+            var image = new BitmapImage(uri) { DecodePixelWidth = px };
+            Cache[resized] = new WeakReference<ImageSource>(image);
+            return image;
+        }
     }
 }
 
@@ -201,9 +216,19 @@ public sealed class QueueRowVM
         PlayCommand = new RelayCommand(() => play(orderIndex));
     }
 
+    // A previously played row from this listening session. It is not part of the playable queue order.
+    public QueueRowVM(Track track, Func<Task> play)
+    {
+        Track = track;
+        OrderIndex = -1;
+        IsHistory = true;
+        PlayCommand = new RelayCommand(play);
+    }
+
     public Track Track { get; }
     public int OrderIndex { get; }
     public bool IsCurrent { get; }
+    public bool IsHistory { get; }
     public ICommand PlayCommand { get; }
 
     public string Title => Track.Title;

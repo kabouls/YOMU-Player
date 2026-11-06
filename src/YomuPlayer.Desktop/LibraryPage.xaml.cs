@@ -101,7 +101,7 @@ public sealed partial class LibraryPage : Page
     private void FillHistory()
     {
         HistoryRows.Clear();
-        foreach (var entry in PlaybackHistory.Items.Take(20))
+        foreach (var entry in PlaybackHistory.Items.Where(e => !AppServices.IsDisliked(e.VideoId)).Take(20))
         {
             var track = PlaybackHistory.ToTrack(entry);
             var subtitle = string.IsNullOrWhiteSpace(entry.Album) ? entry.Artists : $"{entry.Artists} • {entry.Album}";

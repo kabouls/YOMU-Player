@@ -47,6 +47,11 @@
                         <TextBlock Text="{x:Bind KindLabel}" FontSize="10" FontWeight="SemiBold"
                                    CharacterSpacing="60" Foreground="White" />
                     </Border>
+                    <Border Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" CornerRadius="2"
+                            BorderThickness="1" BorderBrush="#9A9A9A" Padding="3,0"
+                            Background="#99000000" Visibility="{x:Bind ExplicitVisibility}">
+                        <TextBlock Text="E" FontSize="9" Foreground="#F0F0F0" />
+                    </Border>
                 </Grid>
                 <TextBlock Text="{x:Bind Title}" MaxLines="2" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
                            Style="{ThemeResource BodyStrongTextBlockStyle}" />

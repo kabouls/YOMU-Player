@@ -13,9 +13,9 @@ namespace YomuPlayer.Desktop;
 public static class AppServices
 {
     private static readonly Dictionary<string, (DateTime At, BrowsePage Page)> PageCache = new();
-    private const int MaxPageCache = 24;
-    private const int MaxCollectionCache = 16;
-    private const int MaxSearchCache = 24;
+    private const int MaxPageCache = 12;
+    private const int MaxCollectionCache = 12;
+    private const int MaxSearchCache = 12;
 
     private static readonly Dictionary<string, (DateTime At, Task<IReadOnlyList<MediaItem>> Task)> SearchCache = new();
     private static readonly Dictionary<string, (DateTime At, CollectionData Data)> CollectionCache = new();
@@ -24,7 +24,7 @@ public static class AppServices
     private static readonly Dictionary<bool, (DateTime At, IReadOnlyList<Shelf> Shelves)> ForYouCache = new();
     private static readonly TimeSpan ForYouTtl = TimeSpan.FromMinutes(15);
 
-    private sealed record ForYouDiskCache(DateTimeOffset At, List<Shelf> Shelves);
+    private sealed record ForYouDiskCache(DateTimeOffset At, List<Shelf> Shelves, int Cursor);
 
     private static string ForYouDiskPath(bool shuffle) => Path.Combine(
         AppPaths.DataRoot, shuffle ? "foryou-shuffle-v2.json" : "foryou-default-v2.json");
@@ -64,6 +64,7 @@ public static class AppServices
     public static event Action<PageRequest>? NavigateRequested;
     public static event Action<string>? ErrorRaised;
     public static event Action<string>? InfoRaised;
+    public static event Action<PlayerTab>? PlayerRequested;
 
     // Raised after a playlist is created or modified so the sidebar can refresh.
     public static event Action? LibraryChanged;
@@ -87,13 +88,15 @@ public static class AppServices
     {
         Audio = new VlcAudioPlayer();
         var settings = AppSettings.Current;
+        settings.ForYouSeedCursor = settings.ForYouSeedCursor == int.MaxValue ? 0 : settings.ForYouSeedCursor + 1;
+        AppSettings.Save();
         Yt.Country = RegionCode(settings.Region);
         Player = new PlayerService(new StreamResolver(), Audio)
         {
             Volume = settings.Volume is > 0 and <= 100 ? settings.Volume : 70,
             Quality = (AudioQuality)Math.Clamp(settings.Quality, 0, 2),
             Autoplay = settings.Autoplay,
-            RadioProvider = async seed => FilterDisliked(await Yt.GetRadioAsync(seed.VideoId)),
+            RadioProvider = async seed => FilterRadio(MixRadio(await Yt.GetRadioAsync(seed.VideoId), seed)),
             QueueTitleProvider = track => Yt.TryGetCachedExtras(track.VideoId)?.QueueTitle
         };
         Player.TrackChanged += track => { if (track is not null) PlaybackHistory.Record(track); };
@@ -111,6 +114,11 @@ public static class AppServices
 
     // Authenticated results (library playlists, liked songs, personal recommendations) must not survive sign-out
     // or an account switch.
+    public static void ClearSearchCache()
+    {
+        lock (SearchCache) SearchCache.Clear();
+    }
+
     public static void ClearCaches()
     {
         lock (PageCache) PageCache.Clear();
@@ -369,6 +377,21 @@ public static class AppServices
         return tracks.Where(t => !disliked.Contains(t.VideoId)).ToList();
     }
 
+    private static IReadOnlyList<Track> FilterRadio(IEnumerable<Track> tracks)
+    {
+        HashSet<string> disliked;
+        lock (DislikedGate) disliked = new HashSet<string>(Disliked, StringComparer.Ordinal);
+        return tracks
+            .Where(t => !disliked.Contains(t.VideoId) && !NotInterested.IsBlocked(t.VideoId))
+            .ToList();
+    }
+
+    public static void MarkNotInterested(string? videoId)
+    {
+        NotInterested.Mark(videoId);
+        ClearForYouCache();
+    }
+
     private static string? DislikedPathLocked()
     {
         if (_dislikedAccount is not { } email) return null;
@@ -480,6 +503,7 @@ public static class AppServices
             var json = await File.ReadAllTextAsync(path);
             var disk = JsonSerializer.Deserialize<ForYouDiskCache>(json);
             if (disk is null || disk.Shelves.Count == 0
+                || disk.Cursor != AppSettings.Current.ForYouSeedCursor
                 || DateTimeOffset.UtcNow - disk.At > ForYouTtl)
                 return null;
 
@@ -487,7 +511,8 @@ public static class AppServices
                 .Select(s => s with
                 {
                     Items = s.Items
-                        .Where(i => !IsDisliked(i.Track?.VideoId ?? i.VideoId ?? ""))
+                        .Where(i => !IsDisliked(i.Track?.VideoId ?? i.VideoId ?? "")
+                                    && !NotInterested.IsBlocked(i.Track?.VideoId ?? i.VideoId))
                         .ToList()
                 })
                 .Where(s => s.Items.Count > 0)
@@ -500,12 +525,12 @@ public static class AppServices
         }
     }
 
-    private static async Task SaveForYouDiskAsync(bool shuffle, IReadOnlyList<Shelf> shelves)
+    private static async Task SaveForYouDiskAsync(bool shuffle, IReadOnlyList<Shelf> shelves, int cursor)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ForYouDiskPath(shuffle))!);
-            var json = JsonSerializer.Serialize(new ForYouDiskCache(DateTimeOffset.UtcNow, shelves.ToList()));
+            var json = JsonSerializer.Serialize(new ForYouDiskCache(DateTimeOffset.UtcNow, shelves.ToList(), cursor));
             await File.WriteAllTextAsync(ForYouDiskPath(shuffle), json);
         }
         catch
@@ -570,7 +595,7 @@ public static class AppServices
         }
 
         var liked = (await GetLikedSampleAsync(50))
-            .Where(t => !IsDisliked(t.VideoId))
+            .Where(t => !IsDisliked(t.VideoId) && !NotInterested.IsBlocked(t.VideoId))
             .ToList();
         var candidates = liked
             .Select((track, index) => new
@@ -595,8 +620,13 @@ public static class AppServices
 
         if (shuffle) candidates = candidates.OrderBy(_ => Random.Shared.Next()).ToList();
 
+        var cursor = candidates.Count == 0 ? 0 : Math.Abs(AppSettings.Current.ForYouSeedCursor % candidates.Count);
+        var rotated = candidates.Skip(cursor).Concat(candidates.Take(cursor)).ToList();
+        var chosen = rotated.Take(2).ToList();
+        var nextCursor = candidates.Count == 0 ? 0 : (cursor + 2) % candidates.Count;
+
         var shelves = new List<Shelf>();
-        var seeds = candidates.Take(2)
+        var seeds = chosen
             .Select(candidate => (
                 Candidate: candidate,
                 Seed: shuffle
@@ -611,7 +641,7 @@ public static class AppServices
             .ToList();
 
         // Start the artist searches alongside the radios; both only depend on the liked sample.
-        var searchArtists = candidates.Take(3).ToList();
+        var searchArtists = chosen.Concat(rotated.Where(c => !chosen.Contains(c))).Take(3).ToList();
         var searchTasks = searchArtists
             .Select(candidate => Safe(() => Yt.SearchSongsAsync(candidate.Artist)))
             .ToList();
@@ -638,7 +668,7 @@ public static class AppServices
         {
             var candidate = searchArtists[i];
             var songs = searchResults[i]
-                .Where(t => !IsDisliked(t.VideoId))
+                .Where(t => !IsDisliked(t.VideoId) && !NotInterested.IsBlocked(t.VideoId))
                 .ToList();
             var ordered = shuffle
                 ? songs.OrderBy(_ => Random.Shared.Next()).ToList()
@@ -662,8 +692,10 @@ public static class AppServices
                 more.Select(ToMedia).ToList()));
         }
 
+        AppSettings.Current.ForYouSeedCursor = nextCursor;
+        AppSettings.Save();
         lock (ForYouCache) ForYouCache[shuffle] = (DateTime.UtcNow, shelves);
-        await SaveForYouDiskAsync(shuffle, shelves);
+        await SaveForYouDiskAsync(shuffle, shelves, nextCursor);
         return shelves;
     }
 
@@ -672,8 +704,9 @@ public static class AppServices
         string? excludeArtist = null)
     {
         var ordered = shuffle
-            ? source.Where(t => !IsDisliked(t.VideoId)).OrderBy(_ => Random.Shared.Next()).ToList()
-            : source.Where(t => !IsDisliked(t.VideoId)).ToList();
+            ? source.Where(t => !IsDisliked(t.VideoId) && !NotInterested.IsBlocked(t.VideoId))
+                .OrderBy(_ => Random.Shared.Next()).ToList()
+            : source.Where(t => !IsDisliked(t.VideoId) && !NotInterested.IsBlocked(t.VideoId)).ToList();
         var seen = new HashSet<string> { seedId };
         var counts = new Dictionary<string, int>();
         var result = new List<Track>();
@@ -759,11 +792,11 @@ public static class AppServices
         lock (SearchCache)
         {
             if (SearchCache.TryGetValue(key, out var hit)
-                && DateTime.UtcNow - hit.At < TimeSpan.FromMinutes(3)
+                && DateTime.UtcNow - hit.At < TimeSpan.FromMinutes(2)
                 && !hit.Task.IsFaulted && !hit.Task.IsCanceled)
                 return hit.Task;
 
-            foreach (var stale in SearchCache.Where(kv => DateTime.UtcNow - kv.Value.At > TimeSpan.FromMinutes(3)).Select(kv => kv.Key).ToList())
+            foreach (var stale in SearchCache.Where(kv => DateTime.UtcNow - kv.Value.At > TimeSpan.FromMinutes(2)).Select(kv => kv.Key).ToList())
                 SearchCache.Remove(stale);
             if (SearchCache.Count >= MaxSearchCache)
             {
@@ -903,7 +936,6 @@ public static class AppServices
     {
         HashSet<string> disliked;
         lock (DislikedGate) disliked = new HashSet<string>(Disliked, StringComparer.Ordinal);
-        if (disliked.Count == 0) return page;
 
         return page with
         {
@@ -913,7 +945,7 @@ public static class AppServices
                     Items = s.Items.Where(i =>
                     {
                         var id = i.Track?.VideoId ?? i.VideoId;
-                        return id is null || !disliked.Contains(id);
+                        return id is null || (!disliked.Contains(id) && !NotInterested.IsBlocked(id));
                     }).ToList()
                 })
                 .Where(s => s.Items.Count > 0)
@@ -1171,10 +1203,14 @@ public static class AppServices
     public static async Task PlayCollectionAsync(
         IReadOnlyList<Track> tracks, int startIndex, bool? shuffle, string? sourceTitle = null)
     {
+        // Disliked tracks are excluded from generated/collection playback. Explicit search play
+        // goes through PlayExplicitAsync instead and remains available.
+        tracks = FilterDisliked(tracks);
         if (tracks.Count == 0) return;
+        RequestPlayer(PlayerTab.Queue);
         if (shuffle is { } sh) Player.Queue.Shuffle = sh;
         if (!string.IsNullOrWhiteSpace(sourceTitle)) Player.Queue.SourceTitle = sourceTitle;
-        await Player.PlayQueueAsync(tracks, startIndex);
+        await Player.PlayQueueAsync(tracks, Math.Clamp(startIndex, 0, tracks.Count - 1));
     }
 
     private static async Task<IReadOnlyList<Track>> Safe(Func<Task<IReadOnlyList<Track>>> load)
@@ -1193,12 +1229,44 @@ public static class AppServices
             .ToList();
     }
 
+    public static void RequestPlayer(PlayerTab tab = PlayerTab.Queue) => PlayerRequested?.Invoke(tab);
+
+    // Explicit play: this is the only path that brings the full player page forward.
+    // Automatic queue advances never call this.
+    public static async Task PlayExplicitAsync(Track track)
+    {
+        RequestPlayer(PlayerTab.Queue);
+        await Player.PlayTrackWithRadioAsync(track);
+    }
+
+    public static async Task StartRadioExplicitAsync(Track track)
+    {
+        RequestPlayer(PlayerTab.Queue);
+        var radio = FilterRadio(MixRadio(await Yt.GetRadioAsync(track.VideoId), track));
+        await Player.PlayQueueAsync(radio.Count > 0 ? radio : new[] { track });
+    }
+
+    // YouTube's radio queue is deterministic for a seed. Rotate it and push songs already played
+    // in this session to the back so repeated starts do not feel identical.
+    private static IReadOnlyList<Track> MixRadio(IReadOnlyList<Track> source, Track seed)
+    {
+        HashSet<string> recent =
+            Player?.SessionHistory?.Select(t => t.VideoId).ToHashSet(StringComparer.Ordinal)
+            ?? new HashSet<string>(StringComparer.Ordinal);
+        var candidates = source
+            .Where(t => t.VideoId != seed.VideoId && !recent.Contains(t.VideoId))
+            .OrderBy(_ => Random.Shared.Next())
+            .ToList();
+        if (candidates.Count > 0) return candidates;
+        return source.Where(t => t.VideoId != seed.VideoId).OrderBy(_ => Random.Shared.Next()).ToList();
+    }
+
     public static async Task ActivateAsync(MediaItem item)
     {
         switch (item.Kind)
         {
             case MediaKind.Song or MediaKind.Video when item.Track is not null:
-                await Player.PlayTrackWithRadioAsync(item.Track);
+                await PlayExplicitAsync(item.Track);
                 break;
 
             case MediaKind.Album or MediaKind.Playlist:
