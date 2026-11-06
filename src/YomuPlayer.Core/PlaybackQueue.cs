@@ -75,6 +75,16 @@ public sealed class PlaybackQueue
         return list;
     }
 
+    // The persistent queue order, including tracks that have already played in this queue.
+    public IReadOnlyList<QueueEntry> Entries()
+    {
+        if (_order.Count == 0) return Array.Empty<QueueEntry>();
+        var list = new List<QueueEntry>(_order.Count);
+        for (var i = 0; i < _order.Count; i++)
+            list.Add(new QueueEntry(i, _tracks[_order[i]], i == _pos));
+        return list;
+    }
+
     public int UpcomingCount => _pos < 0 ? 0 : _order.Count - _pos;
 
     // Jumps to a position in play order (what the queue list shows), not a track index.

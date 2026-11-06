@@ -7,32 +7,24 @@
     Background="#000000">
 
     <Page.Resources>
-        <!-- YTM-style queue row: the current song is a gray highlight with a play glyph, not a red bar. -->
+        <!-- Compact, clickable queue row: status on the left, title/artist stacked, no artwork. -->
         <DataTemplate x:Key="QueueRowTemplate" x:DataType="local:QueueRowVM">
             <Button Command="{x:Bind PlayCommand}" Background="{x:Bind RowBackground}" BorderThickness="0"
-                    Padding="6,3" CornerRadius="6" HorizontalAlignment="Stretch"
+                    Padding="6,4" CornerRadius="6" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch" ContextRequested="QueueRow_ContextRequested"
                     AutomationProperties.Name="{x:Bind Title}">
                 <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="16" />
-                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="20" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <FontIcon Grid.Column="0" Glyph="&#xE768;" FontSize="10" VerticalAlignment="Center"
-                              Foreground="#F2F2F2" Visibility="{x:Bind PlayIconVisibility}" />
+                    <FontIcon Grid.Column="0" Glyph="{x:Bind StatusGlyph}" FontSize="11"
+                              Opacity="{x:Bind StatusOpacity}" VerticalAlignment="Center"
+                              Foreground="#F2F2F2" />
 
-                    <Grid Grid.Column="1" Width="40" Height="40">
-                        <Border CornerRadius="4">
-                            <Border.Background>
-                                <ImageBrush ImageSource="{x:Bind Art}" Stretch="UniformToFill" />
-                            </Border.Background>
-                        </Border>
-                    </Grid>
-
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                         <TextBlock Text="{x:Bind Title}" Foreground="#F2F2F2" MaxLines="1"
                                    TextTrimming="CharacterEllipsis" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -46,7 +38,7 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="3" Text="{x:Bind Duration}" VerticalAlignment="Center" MinWidth="38"
+                    <TextBlock Grid.Column="2" Text="{x:Bind Duration}" VerticalAlignment="Center" MinWidth="38"
                                TextAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Grid>
             </Button>

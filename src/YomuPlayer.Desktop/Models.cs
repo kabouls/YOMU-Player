@@ -208,11 +208,12 @@ public sealed class QueueRowVM
     private ImageSource? _art;
     private bool _artLoaded;
 
-    public QueueRowVM(Track track, int orderIndex, bool isCurrent, Func<int, Task> play)
+    public QueueRowVM(Track track, int orderIndex, bool isCurrent, Func<int, Task> play, bool isPlayed = false)
     {
         Track = track;
         OrderIndex = orderIndex;
         IsCurrent = isCurrent;
+        IsPlayed = isPlayed;
         PlayCommand = new RelayCommand(() => play(orderIndex));
     }
 
@@ -228,12 +229,15 @@ public sealed class QueueRowVM
     public Track Track { get; }
     public int OrderIndex { get; }
     public bool IsCurrent { get; }
+    public bool IsPlayed { get; }
     public bool IsHistory { get; }
     public ICommand PlayCommand { get; }
 
     public string Title => Track.Title;
     public string Subtitle => Track.ArtistLine;
     public string Duration => Fmt.Time(Track.Duration);
+    public string StatusGlyph => IsCurrent ? "\uE768" : IsPlayed ? "\uE73E" : "\uE768";
+    public double StatusOpacity => IsCurrent ? 1.0 : IsPlayed ? 0.55 : 0.85;
     public ImageSource? Art
     {
         get

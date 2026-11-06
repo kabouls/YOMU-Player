@@ -1243,7 +1243,9 @@ public static class AppServices
     {
         RequestPlayer(PlayerTab.Queue);
         var radio = FilterRadio(MixRadio(await Yt.GetRadioAsync(track.VideoId), track));
-        await Player.PlayQueueAsync(radio.Count > 0 ? radio : new[] { track });
+        var queue = new List<Track> { track };
+        queue.AddRange(radio.Where(t => t.VideoId != track.VideoId));
+        await Player.PlayQueueAsync(queue, 0);
     }
 
     // YouTube's radio queue is deterministic for a seed. Rotate it and push songs already played
