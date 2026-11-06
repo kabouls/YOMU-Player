@@ -43,7 +43,7 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Text="The client secret is stored encrypted for your Windows account. Your Google password never passes through this app: sign-in happens in your default browser. While the OAuth app is in Testing mode, only Test users can sign in and Google may ask you to sign in again after 7 days. Keep it in Testing until the app is ready for public distribution." />
 
-            <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFFF6B6B" />
+            <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFE8E8E8" />
         </StackPanel>
     </ScrollViewer>
 </ContentDialog>

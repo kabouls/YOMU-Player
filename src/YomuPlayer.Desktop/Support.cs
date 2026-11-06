@@ -36,6 +36,18 @@ public sealed class AppSettings
     public bool Autoplay { get; set; } = true;
     public string? LastSeenVersion { get; set; }
 
+    // "auto" uses the Windows region, "worldwide" omits the InnerTube country hint,
+    // otherwise this is an ISO 3166-1 alpha-2 code.
+    public string Region { get; set; } = "auto";
+
+    // The manually selected YouTube Music mood/genre page used for Home's genre row.
+    public string? GenreTitle { get; set; }
+    public string? GenreBrowseId { get; set; }
+    public string? GenreParams { get; set; }
+
+    // Rotates the artist seeds used by For You so a fresh start/refresh does not repeat the same two.
+    public int ForYouSeedCursor { get; set; }
+
     // Last non-maximized window geometry, plus whether the window was maximized at close.
     public int WindowWidth { get; set; } = 1280;
     public int WindowHeight { get; set; } = 820;

@@ -1,5 +1,26 @@
 [
   {
+    "version": "1.0.0-nightly.12",
+    "date": "2026-11-04",
+    "channel": "nightly",
+    "notes": [
+      "Fix nightly version ordering.",
+      "Compare numeric prerelease identifiers so nightly.10 updates from nightly.9 correctly."
+    ]
+  },
+  {
+    "version": "1.0.0-nightly.11",
+    "date": "2026-11-04",
+    "channel": "nightly",
+    "notes": [
+      "Home: second artist row is now More like X and filters X out.",
+      "Home: manual YouTube Music genre picker adds a genre row.",
+      "Library: playlist card grid plus local-only recently played history.",
+      "Explore: app-wide region selector with Auto, Worldwide, and country lists.",
+      "Changelog: preserve multiline nightly notes in the manifest and bundled changelog."
+    ]
+  },
+  {
     "version": "1.0.0",
     "date": "2026-11-03",
     "channel": "stable",

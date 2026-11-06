@@ -7,24 +7,25 @@
     Background="#000000">
 
     <Page.Resources>
-        <!-- YTM-style queue row: the current song is a gray highlight with a play glyph, not a red bar. -->
+        <!-- Persistent queue row: status on the left, artwork, title/artist, duration. -->
         <DataTemplate x:Key="QueueRowTemplate" x:DataType="local:QueueRowVM">
             <Button Command="{x:Bind PlayCommand}" Background="{x:Bind RowBackground}" BorderThickness="0"
-                    Padding="6,3" CornerRadius="6" HorizontalAlignment="Stretch"
+                    Padding="6,4" CornerRadius="6" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch" ContextRequested="QueueRow_ContextRequested"
                     AutomationProperties.Name="{x:Bind Title}">
                 <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="16" />
-                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="44" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <FontIcon Grid.Column="0" Glyph="&#xE768;" FontSize="10" VerticalAlignment="Center"
-                              Foreground="#F2F2F2" Visibility="{x:Bind PlayIconVisibility}" />
+                    <FontIcon Grid.Column="0" Glyph="{x:Bind StatusGlyph}" FontSize="11"
+                              Opacity="{x:Bind StatusOpacity}" VerticalAlignment="Center"
+                              Foreground="#F2F2F2" />
 
-                    <Grid Grid.Column="1" Width="40" Height="40">
+                    <Grid Grid.Column="1" Width="44" Height="44">
                         <Border CornerRadius="4">
                             <Border.Background>
                                 <ImageBrush ImageSource="{x:Bind Art}" Stretch="UniformToFill" />

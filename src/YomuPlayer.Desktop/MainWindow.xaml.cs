@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
@@ -37,6 +38,8 @@ public sealed partial class MainWindow : Window
     private bool _windowStateReady;
     private bool _navSync;
     private bool _lite;
+    private string? _liteQueueKey;
+    public ObservableCollection<QueueRowVM> LiteUpNextRows { get; } = new();
     private bool _allowClose;
     private bool _initialized;
     private bool _liteVolumeSync;
@@ -78,7 +81,10 @@ public sealed partial class MainWindow : Window
                 OnPlaybackShortcut);
         }
 
-        AppServices.NavigateRequested += r => DispatcherQueue.TryEnqueue(() => Navigate(r, top: false));
+        AppServices.NavigateRequested += r =>
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => Navigate(r, top: false));
+        AppServices.PlayerRequested += tab =>
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => OpenPlayer(tab));
         AppServices.ErrorRaised += m => DispatcherQueue.TryEnqueue(() => ShowError(m));
         AppServices.InfoRaised += m => DispatcherQueue.TryEnqueue(() => ShowInfo(m));
         AppServices.Auth.Changed += () => DispatcherQueue.TryEnqueue(() =>
@@ -105,6 +111,7 @@ public sealed partial class MainWindow : Window
             Title = t is null ? AppPaths.ProductName : $"{t.Title} - {t.ArtistLine}";
             if (_lite) UpdateLite();
         });
+        AppServices.Player.Queue.Changed += () => DispatcherQueue.TryEnqueue(UpdateLiteQueue);
         UpdateService.UpdateAvailable += info =>
             DispatcherQueue.TryEnqueue(() => ShowUpdateChip(info));
 
@@ -391,14 +398,16 @@ public sealed partial class MainWindow : Window
             presenter.IsResizable = false;
         }
         var scale = RootGrid.XamlRoot?.RasterizationScale ?? 1.0;
-        AppWindow.Resize(new SizeInt32((int)(420 * scale), (int)(228 * scale)));
+        AppWindow.Resize(new SizeInt32((int)(420 * scale), (int)(360 * scale)));
 
         _liteTrackId = null;
         _liteRatingTrackId = null;
         _liteRatingCts?.Cancel();
         UpdateLite();
         UpdateTitleBarRegions();
+        AppServices.TrimForLite();
         MemoryTrimmer.Start();
+        MemoryTrimmer.TrimNow();
     }
 
     private void ExitLite()
@@ -461,11 +470,97 @@ public sealed partial class MainWindow : Window
 
         LiteArtist.Text = p.IsLoading ? "Loading\u2026" : track?.ArtistLine ?? "";
         LitePlayIcon.Glyph = p.IsPlaying ? "\uE769" : "\uE768";
+        UpdateLiteQueue();
 
         if ((LiteShuffle.IsChecked == true) != p.Queue.Shuffle) LiteShuffle.IsChecked = p.Queue.Shuffle;
         LiteRepeatIcon.Glyph = p.Queue.Repeat == RepeatMode.One ? "\uE8ED" : "\uE8EE";
         LiteRepeatIcon.Opacity = p.Queue.Repeat == RepeatMode.Off ? 0.5 : 1.0;
         SyncLiteVolume();
+    }
+
+    private void UpdateLiteQueue()
+    {
+        if (!_lite) return;
+        var entries = AppServices.Player.Queue.Entries();
+        var position = AppServices.Player.Queue.Position;
+        var previous = entries.Where(e => e.OrderIndex < position).TakeLast(10);
+        var currentAndNext = entries.Where(e => e.OrderIndex >= position).Take(11);
+        var visible = previous.Concat(currentAndNext).ToList();
+        var key = string.Join("|", visible.Select(e => e.OrderIndex + ":" + e.Track.VideoId));
+        if (key == _liteQueueKey) return;
+        _liteQueueKey = key;
+        LiteUpNextRows.Clear();
+        foreach (var entry in visible)
+            LiteUpNextRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, entry.IsCurrent,
+                PlayLiteOrderAsync, isPlayed: entry.OrderIndex < position));
+        LiteUpNext.Visibility = LiteUpNextRows.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private Task PlayLiteOrderAsync(int orderIndex) => AppServices.Player.PlayOrderIndexAsync(orderIndex);
+
+    private void LiteVolume_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        var delta = e.GetCurrentPoint(LiteVolume).Properties.MouseWheelDelta;
+        AppServices.Player.Volume += delta > 0 ? 5 : -5;
+        e.Handled = true;
+    }
+
+    private async void LiteDevices_Click(object sender, RoutedEventArgs e)
+    {
+        var names = string.Join("\n", AppServices.Devices.Select(d => d.DeviceName));
+        await Dialogs.ShowAsync(new ContentDialog
+        {
+            Title = "Playback devices",
+            Content = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(names)
+                    ? "This PC"
+                    : "This PC\n" + names,
+                TextWrapping = TextWrapping.Wrap
+            },
+            CloseButtonText = "Close"
+        });
+    }
+
+    private async void LiteSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var settings = AppSettings.Current;
+        var quality = new RadioButtons
+        {
+            Header = "Audio quality",
+            SelectedIndex = Math.Clamp(settings.Quality, 0, 2),
+            Items =
+            {
+                "High (opus, ~130 kbps)",
+                "Balanced (opus, ~70 kbps)",
+                "Data saver (~50 kbps)"
+            }
+        };
+        var autoplay = new ToggleSwitch
+        {
+            Header = "Autoplay similar songs",
+            IsOn = settings.Autoplay
+        };
+        var dialog = new ContentDialog
+        {
+            Title = "Playback settings",
+            Content = new StackPanel
+            {
+                Spacing = 14,
+                Children = { quality, autoplay }
+            },
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary
+        };
+        if (await Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
+
+        settings.Quality = Math.Clamp(quality.SelectedIndex, 0, 2);
+        settings.Autoplay = autoplay.IsOn;
+        AppSettings.Save();
+        AppServices.Player.Quality = (AudioQuality)settings.Quality;
+        AppServices.Player.Autoplay = settings.Autoplay;
+        AppServices.ReportInfo("Playback settings saved.");
     }
 
     private void SyncLiteVolume()
@@ -904,6 +999,11 @@ public sealed partial class MainWindow : Window
     {
         if (_lite) ExitLite(); // anything that needs a page brings the normal window back
 
+        // Search cards carry decoded artwork. Once we return to Home, let that transient page data go
+        // instead of keeping several result sets alive for the rest of the session.
+        if (request.Kind == PageKind.Home && ContentFrame.Content is not HomePage)
+            AppServices.ClearSearchCache();
+
         var page = request.Kind switch
         {
             PageKind.Home => typeof(HomePage),
@@ -917,9 +1017,10 @@ public sealed partial class MainWindow : Window
         };
 
         PopBlankPage();
-        NavigationTransitionInfo transition = top
-            ? new EntranceNavigationTransitionInfo()
-            : new DrillInNavigationTransitionInfo();
+        // Page construction already has real work to do; the default full-page entrance/drill
+        // transitions make sidebar clicks feel sticky. Keep navigation immediate and let content
+        // paint as soon as it is ready.
+        NavigationTransitionInfo transition = new SuppressNavigationTransitionInfo();
 
         ContentFrame.Navigate(page, request, transition);
         if (top)
@@ -931,6 +1032,7 @@ public sealed partial class MainWindow : Window
 
     private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
     {
+        if (e.SourcePageType == typeof(HomePage)) AppServices.ClearSearchCache();
         BackButton.Visibility = ContentFrame.CanGoBack && !_lite ? Visibility.Visible : Visibility.Collapsed;
         Bar.SetPlayerOpen(ContentFrame.Content is PlayerPage);
         ErrorBar.IsOpen = false;

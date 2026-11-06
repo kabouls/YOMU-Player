@@ -63,14 +63,16 @@ public static class ContextMenus
 
         if (item.IsTrack && item.Track is { } t)
         {
-            Add("Play", "\uE768", () => AppServices.Player.PlayTrackWithRadioAsync(t));
-            Add("Start radio", "\uE93E", async () =>
-            {
-                var radio = await AppServices.Yt.GetRadioAsync(t.VideoId);
-                await AppServices.Player.PlayQueueAsync(radio.Count > 0 ? radio : new[] { t }, 0);
-            });
+            Add("Start radio", "\uE93E", () => AppServices.StartRadioExplicitAsync(t));
+            Add("Play", "\uE768", () => AppServices.PlayExplicitAsync(t));
             Add("Play next", "\uE893", () => AppServices.Player.AddNextAsync(new[] { t }));
             Add("Add to queue", "\uE710", () => AppServices.Player.AddToQueueAsync(new[] { t }));
+            Add("Not interested", "\uE711", () =>
+            {
+                AppServices.MarkNotInterested(t.VideoId);
+                AppServices.ReportInfo("Not interested. This song will be hidden from Home recommendations for a week.");
+                return Task.CompletedTask;
+            });
 
             if (t.Artists.Count > 0 || t.AlbumId is not null) Sep();
             if (t.Artists.Count > 0)
@@ -85,7 +87,7 @@ public static class ContextMenus
             if (t.AlbumId is not null && !string.IsNullOrWhiteSpace(t.Album))
             {
                 var album = new MediaItem(MediaKind.Album, t.Album!, t.ArtistLine, t.ThumbnailUrl, BrowseId: t.AlbumId);
-                Add("Go to album", null, () =>
+                Add("Go to album", "\uE8B7", () =>
                 {
                     AppServices.Navigate(new PageRequest(album.Title, PageKind.Collection, Item: album));
                     return Task.CompletedTask;
@@ -97,7 +99,7 @@ public static class ContextMenus
             {
                 Sep();
                 Add("Add to playlist", "\uE710", () => AddToPlaylistAsync(t));
-                Add("Like", null, () => AppServices.LikeTrackAsync(t));
+                Add("Like", "\uE8E1", () => AppServices.LikeTrackAsync(t));
 
                 if (item.CanEdit && t.PlaylistItemId is not null && t.PlaylistId is not null)
                 {
@@ -108,7 +110,7 @@ public static class ContextMenus
             }
             else
             {
-                NeedsSignIn(("Add to playlist", "\uE710"), ("Like", null));
+                NeedsSignIn(("Add to playlist", "\uE710"), ("Like", "\uE8E1"));
             }
             return f;
         }

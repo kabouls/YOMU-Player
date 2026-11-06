@@ -12,7 +12,16 @@ public static class MemoryTrimmer
     public static void Start()
     {
         Stop();
-        _timer = new Timer(_ => Trim(), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(45));
+        // Frequent working-set release is cheap; a blocking GC every few seconds would hurt audio.
+        _timer = new Timer(_ => ReleaseWorkingSet(), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(30));
+    }
+
+    public static void TrimNow() => Trim();
+
+    private static void ReleaseWorkingSet()
+    {
+        try { K32EmptyWorkingSet(Process.GetCurrentProcess().Handle); }
+        catch { }
     }
 
     public static void Stop()

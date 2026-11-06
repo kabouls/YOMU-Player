@@ -10,7 +10,7 @@
 
     <StackPanel Spacing="12" MinWidth="440" MaxWidth="560">
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <FontIcon Glyph="&#xE895;" FontSize="18" Foreground="#FFFF6B86" />
+            <FontIcon Glyph="&#xE895;" FontSize="18" Foreground="#FFE8E8E8" />
             <TextBlock x:Name="VersionText" Style="{ThemeResource SubtitleTextBlockStyle}" />
         </StackPanel>
         <TextBlock x:Name="DateText" Style="{ThemeResource CaptionTextBlockStyle}"

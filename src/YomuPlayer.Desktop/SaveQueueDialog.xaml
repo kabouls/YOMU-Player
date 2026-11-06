@@ -44,7 +44,7 @@
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10">
             <ProgressRing x:Name="Busy" Width="20" Height="20" IsActive="False" Visibility="Collapsed" />
-            <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFFF6B6B"
+            <TextBlock x:Name="ErrorText" Visibility="Collapsed" TextWrapping="Wrap" Foreground="#FFE8E8E8"
                        VerticalAlignment="Center" />
         </StackPanel>
     </Grid>

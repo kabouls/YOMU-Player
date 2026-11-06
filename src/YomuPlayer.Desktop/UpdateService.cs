@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 namespace YomuPlayer.Desktop;
 
 public sealed record UpdateAsset(string Url, string? Sha256);
+public sealed record UpdateDownloadProgress(double Fraction, long Bytes, long Total);
 public sealed record UpdateInfo(
     string Version,
     string Channel,
@@ -58,7 +59,7 @@ public static class UpdateService
     }
 
     public static async Task<UpdateLaunchResult> DownloadAndInstallAsync(
-        UpdateInfo info, IProgress<double>? progress = null, CancellationToken ct = default)
+        UpdateInfo info, IProgress<UpdateDownloadProgress>? progress = null, CancellationToken ct = default)
     {
         var asset = AppPaths.IsPortable ? info.Portable : info.Setup;
         if (asset is null || string.IsNullOrWhiteSpace(asset.Url))
@@ -70,7 +71,9 @@ public static class UpdateService
         Directory.CreateDirectory(AppPaths.UpdatesRoot);
         var kind = AppPaths.IsPortable ? "portable" : "setup";
         var extension = AppPaths.IsPortable ? ".zip" : ".exe";
-        var path = Path.Combine(AppPaths.UpdatesRoot, $"YOMU-Player-{kind}-{info.Version}{extension}");
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Environment.ProcessId;
+        var path = Path.Combine(AppPaths.UpdatesRoot,
+            $"YOMU-Player-{kind}-{info.Version}-{stamp}{extension}");
         var temp = path + ".part";
 
         try
@@ -82,7 +85,7 @@ public static class UpdateService
                 if (!string.Equals(actual, asset.Sha256.Trim(), StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("The downloaded update failed its SHA-256 check.");
             }
-            File.Move(temp, path, overwrite: true);
+            File.Move(temp, path);
         }
         catch
         {
@@ -104,14 +107,16 @@ public static class UpdateService
     // Start a tiny hidden helper that waits for YOMU to exit before launching setup.
     private static void StartInstallerAfterExit(string setupPath)
     {
-        var scriptPath = Path.Combine(AppPaths.UpdatesRoot, "apply-installer-update.ps1");
+        var scriptPath = Path.Combine(AppPaths.UpdatesRoot,
+            "apply-installer-update-" + Guid.NewGuid().ToString("N") + ".ps1");
         var script = """
             param(
                 [Parameter(Mandatory=$true)][int]$ProcessId,
                 [Parameter(Mandatory=$true)][string]$SetupPath
             )
             $ErrorActionPreference = 'Stop'
-            Wait-Process -Id $ProcessId -ErrorAction SilentlyContinue
+            Wait-Process -Id $ProcessId -Timeout 120 -ErrorAction SilentlyContinue
+            if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) { exit 1 }
             Start-Sleep -Milliseconds 600
             Start-Process -FilePath $SetupPath -ArgumentList '/SILENT','/SUPPRESSMSGBOXES','/CLOSEAPPLICATIONS','/NORESTART','/RELAUNCH'
             """;
@@ -215,7 +220,7 @@ public static class UpdateService
     }
 
     private static async Task DownloadAsync(
-        string url, string path, IProgress<double>? progress, CancellationToken ct)
+        string url, string path, IProgress<UpdateDownloadProgress>? progress, CancellationToken ct)
     {
         using var res = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         res.EnsureSuccessStatusCode();
@@ -230,9 +235,10 @@ public static class UpdateService
         {
             await output.WriteAsync(buffer.AsMemory(0, read), ct);
             done += read;
-            if (total > 0) progress?.Report(Math.Clamp((double)done / total, 0, 1));
+            if (total > 0) progress?.Report(new UpdateDownloadProgress(
+                Math.Clamp((double)done / total, 0, 1), done, total));
         }
-        if (total <= 0) progress?.Report(1);
+        if (total <= 0) progress?.Report(new UpdateDownloadProgress(1, done, 0));
     }
 
     private static async Task<string> HashFileAsync(string path, CancellationToken ct)
@@ -246,7 +252,8 @@ public static class UpdateService
     // to exit, unpacks the portable zip over the app folder while keeping data, then relaunches the app.
     private static void StartPortableUpdater(string zipPath)
     {
-        var scriptPath = Path.Combine(AppPaths.UpdatesRoot, "apply-portable-update.ps1");
+        var scriptPath = Path.Combine(AppPaths.UpdatesRoot,
+            "apply-portable-update-" + Guid.NewGuid().ToString("N") + ".ps1");
         var script = """
             param(
                 [Parameter(Mandatory=$true)][int]$ProcessId,
@@ -255,7 +262,8 @@ public static class UpdateService
                 [Parameter(Mandatory=$true)][string]$ExeName
             )
             $ErrorActionPreference = 'Stop'
-            Wait-Process -Id $ProcessId -ErrorAction SilentlyContinue
+            Wait-Process -Id $ProcessId -Timeout 120 -ErrorAction SilentlyContinue
+            if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) { exit 1 }
             Start-Sleep -Milliseconds 700
             $stage = Join-Path $env:TEMP ('YomuUpdate-' + [guid]::NewGuid().ToString('N'))
             try {
@@ -311,7 +319,30 @@ internal static class VersionUtil
 
         if (aPre is null) return bPre is null ? 0 : 1;
         if (bPre is null) return -1;
-        return string.Compare(aPre, bPre, StringComparison.OrdinalIgnoreCase);
+        return ComparePre(aPre, bPre);
+    }
+
+    // Semver-style prerelease ordering: nightly.9 is older than nightly.10 (plain string
+    // comparison would put ".11" before ".9" and hide newer nightlies).
+    private static int ComparePre(string a, string b)
+    {
+        var ap = a.Split('.');
+        var bp = b.Split('.');
+        for (var i = 0; i < Math.Min(ap.Length, bp.Length); i++)
+        {
+            var aNumeric = int.TryParse(ap[i], out var aNumber);
+            var bNumeric = int.TryParse(bp[i], out var bNumber);
+            if (aNumeric && bNumeric)
+            {
+                var number = aNumber.CompareTo(bNumber);
+                if (number != 0) return number;
+                continue;
+            }
+            if (aNumeric != bNumeric) return aNumeric ? -1 : 1;
+            var text = string.Compare(ap[i], bp[i], StringComparison.OrdinalIgnoreCase);
+            if (text != 0) return text;
+        }
+        return ap.Length.CompareTo(bp.Length);
     }
 
     private static (string Core, string? Pre) Split(string version)

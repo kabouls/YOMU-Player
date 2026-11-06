@@ -26,13 +26,28 @@ public static class Thumbnails
 {
     // Googleusercontent art URLs carry their size in the URL (=w226-h226-... or =s192); ask for what we draw.
     private static readonly Regex Size = new(@"=(w\d+-h\d+|s\d+)", RegexOptions.Compiled);
+    private static readonly Dictionary<string, WeakReference<ImageSource>> Cache = new(StringComparer.Ordinal);
+    private static readonly object Gate = new();
 
     public static ImageSource? Create(string? url, int px)
     {
         if (string.IsNullOrEmpty(url)) return null;
         var resized = Size.Replace(url, m => m.Groups[1].Value.StartsWith("w") ? $"=w{px}-h{px}" : $"=s{px}");
         if (!Uri.TryCreate(resized, UriKind.Absolute, out var uri)) return null;
-        return new BitmapImage(uri) { DecodePixelWidth = px };
+
+        lock (Gate)
+        {
+            if (Cache.TryGetValue(resized, out var weak) && weak.TryGetTarget(out var cached))
+                return cached;
+            if (Cache.Count > 240)
+            {
+                foreach (var key in Cache.Where(kv => !kv.Value.TryGetTarget(out _)).Select(kv => kv.Key).ToList())
+                    Cache.Remove(key);
+            }
+            var image = new BitmapImage(uri) { DecodePixelWidth = px };
+            Cache[resized] = new WeakReference<ImageSource>(image);
+            return image;
+        }
     }
 }
 
@@ -78,7 +93,7 @@ public sealed class ItemVM
         {
             if (!_artLoaded)
             {
-                _art = Thumbnails.Create(Item.ThumbnailUrl, 320);
+                _art = Thumbnails.Create(Item.ThumbnailUrl, 256);
                 _artLoaded = true;
             }
             return _art;
@@ -188,27 +203,44 @@ public sealed class TrackVM
 // A row in the player page's "Up next" list. OrderIndex is the position in play order, not the track index.
 public sealed class QueueRowVM
 {
-    private static readonly Brush CurrentRow = new SolidColorBrush(Color.FromArgb(0xFF, 0x1F, 0x1F, 0x1F));
+    private static readonly Brush CurrentRow = new SolidColorBrush(Color.FromArgb(0xFF, 0x2A, 0x2A, 0x2A));
     private static readonly Brush NormalRow = new SolidColorBrush(Color.FromArgb(0x00, 0x00, 0x00, 0x00));
     private ImageSource? _art;
     private bool _artLoaded;
 
-    public QueueRowVM(Track track, int orderIndex, bool isCurrent, Func<int, Task> play)
+    public QueueRowVM(Track track, int orderIndex, bool isCurrent, Func<int, Task> play, bool isPlayed = false)
     {
         Track = track;
         OrderIndex = orderIndex;
         IsCurrent = isCurrent;
+        IsPlayed = isPlayed;
         PlayCommand = new RelayCommand(() => play(orderIndex));
+    }
+
+    // A previously played row from this listening session. It is not part of the playable queue order.
+    public QueueRowVM(Track track, Func<Task> play)
+    {
+        Track = track;
+        OrderIndex = -1;
+        IsHistory = true;
+        PlayCommand = new RelayCommand(play);
     }
 
     public Track Track { get; }
     public int OrderIndex { get; }
     public bool IsCurrent { get; }
+    public bool IsPlayed { get; }
+    public bool IsHistory { get; }
     public ICommand PlayCommand { get; }
 
     public string Title => Track.Title;
     public string Subtitle => Track.ArtistLine;
     public string Duration => Fmt.Time(Track.Duration);
+    public string StatusGlyph => IsCurrent ? "\uE768" : IsPlayed ? "\uE73E" : "\uE768";
+    public double StatusOpacity => IsCurrent ? 1.0 : IsPlayed ? 0.55 : 0.85;
+    public Windows.UI.Text.FontWeight TitleWeight => IsCurrent
+        ? Microsoft.UI.Text.FontWeights.SemiBold
+        : Microsoft.UI.Text.FontWeights.Normal;
     public ImageSource? Art
     {
         get

@@ -14,7 +14,7 @@ public sealed class InnerTubeClient : IDisposable
 
     private readonly HttpClient _http;
     private readonly string _language;
-    private readonly string _country;
+    public string? Country { get; set; }
 
     // Small side cache: a "next" response is ~500 KB, and the player page only needs two browse ids from it.
     // Capturing them while the radio queue is fetched means opening the player page usually costs no request.
@@ -22,10 +22,10 @@ public sealed class InnerTubeClient : IDisposable
     private readonly ConcurrentDictionary<string, PlayerExtras> _extras = new();
     private readonly ConcurrentQueue<string> _extrasOrder = new();
 
-    public InnerTubeClient(string language = "en", string country = "ID", HttpClient? http = null)
+    public InnerTubeClient(string language = "en", string? country = "ID", HttpClient? http = null)
     {
         _language = language;
-        _country = country;
+        Country = country;
         _http = http ?? new HttpClient(new HttpClientHandler
         {
             AutomaticDecompression = System.Net.DecompressionMethods.All
@@ -255,19 +255,17 @@ public sealed class InnerTubeClient : IDisposable
         return PostAsync("next", body, ct);
     }
 
-    private JsonObject NewBody() => new()
+    private JsonObject NewBody()
     {
-        ["context"] = new JsonObject
+        var client = new JsonObject
         {
-            ["client"] = new JsonObject
-            {
-                ["clientName"] = "WEB_REMIX",
-                ["clientVersion"] = ClientVersion,
-                ["hl"] = _language,
-                ["gl"] = _country
-            }
-        }
-    };
+            ["clientName"] = "WEB_REMIX",
+            ["clientVersion"] = ClientVersion,
+            ["hl"] = _language
+        };
+        if (!string.IsNullOrWhiteSpace(Country)) client["gl"] = Country;
+        return new JsonObject { ["context"] = new JsonObject { ["client"] = client } };
+    }
 
     private async Task<JsonNode> PostAsync(string path, JsonObject body, CancellationToken ct)
     {

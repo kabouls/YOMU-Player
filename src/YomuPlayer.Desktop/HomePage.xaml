@@ -3,7 +3,8 @@
     x:Class="YomuPlayer.Desktop.HomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:YomuPlayer.Desktop">
+    xmlns:local="using:YomuPlayer.Desktop"
+    NavigationCacheMode="Required">
 
     <Page.Resources>
         <DataTemplate x:Key="HomeShelfTemplate" x:DataType="local:ShelfVM">
@@ -55,6 +56,8 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
                                     HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Content="Genres" Click="Genres_Click"
+                                    ToolTipService.ToolTip="Pick a YouTube Music genre for a Home row" />
                             <ToggleButton x:Name="ShuffleToggle" Content="Shuffle" Click="ShuffleToggle_Click"
                                           ToolTipService.ToolTip="Shuffle the For You shelves" />
                             <Button Content="Refresh" Click="Refresh_Click" />
@@ -92,6 +95,19 @@
                               MaxHeight="1600" VerticalAlignment="Top"
                               ScrollViewer.VerticalScrollMode="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Disabled" />
+                </StackPanel>
+
+                <StackPanel x:Name="GenrePanel" Visibility="Collapsed" Spacing="4" Margin="0,8,0,0">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="GenreHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                        <Button Grid.Column="1" Content="Change genre" Click="Genres_Click" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{x:Bind GenreShelves}"
+                                  ItemTemplate="{StaticResource HomeShelfTemplate}" />
                 </StackPanel>
 
                 <ItemsControl ItemsSource="{x:Bind MoreShelves}"

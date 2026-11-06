@@ -70,6 +70,40 @@ Remove-Item (Join-Path $stageRoot 'data') -Recurse -Force -ErrorAction SilentlyC
 Remove-Item (Join-Path $stageRoot 'portable.marker') -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $stageRoot 'installed.marker') -Force -ErrorAction SilentlyContinue
 
+# This is an audio-only x64 app. Drop payload that never runs instead of asking users to download it.
+$libVlc = Join-Path $stageRoot 'libvlc'
+foreach ($arch in @('win-x86', 'win-arm64')) {
+    Remove-Item (Join-Path $libVlc $arch) -Recurse -Force -ErrorAction SilentlyContinue
+}
+$vlcPlugins = Join-Path $libVlc 'win-x64\plugins'
+foreach ($plugin in @('video_output', 'video_filter', 'video_chroma', 'visualization', 'video_splitter', 'd3d11', 'd3d9', 'stream_out', 'access_output', 'mux', 'spu', 'text_renderer', 'services_discovery', 'meta_engine')) {
+    Remove-Item (Join-Path $vlcPlugins $plugin) -Recurse -Force -ErrorAction SilentlyContinue
+}
+foreach ($file in @('libvlc.lib', 'libvlccore.lib')) {
+    Remove-Item (Join-Path $libVlc "win-x64\$file") -Force -ErrorAction SilentlyContinue
+}
+Remove-Item (Join-Path $libVlc 'win-x64\lua') -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $libVlc 'win-x64\hrtfs') -Recurse -Force -ErrorAction SilentlyContinue
+
+# Optional Windows App SDK AI/ML, widget, WebView and diagnostics payload. YOMU never calls these.
+foreach ($name in @(
+    'onnxruntime.dll', 'onnxruntime_providers_shared.dll', 'DirectML.dll', 'Microsoft.ML.OnnxRuntime.dll',
+    'NpuDetect', 'Microsoft.DiaSymReader.Native.amd64.dll', 'mscordaccore.dll',
+    'mscordaccore_amd64_amd64_8.0.3326.52219.dll', 'mscordbi.dll')) {
+    Remove-Item (Join-Path $stageRoot $name) -Recurse -Force -ErrorAction SilentlyContinue
+}
+Get-ChildItem $stageRoot -Filter 'Microsoft.Windows.AI*' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem $stageRoot -Filter 'Microsoft.Windows.Widgets*' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem $stageRoot -Filter 'Microsoft.Web.WebView2*' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# English-only UI. Keep en-US (WinUI loads its control resources from there); satellite folders are unused.
+Get-ChildItem $stageRoot -Directory -Force |
+    Where-Object { $_.Name -match '^(?:[a-z]{2,3}(-[A-Za-z]{2,4}){1,2}|zh-Hans|zh-Hant)$' -and $_.Name -ne 'en-US' } |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+Get-ChildItem $stageRoot -Recurse -File -Include '*.pdb' -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
 $manifestUrl = if ($Channel -eq 'nightly') {
     'https://kabouls.github.io/YOMU-Player/nightly.json'
 } else {
@@ -97,11 +131,15 @@ if (Test-Path $changelogPath) {
     } catch { $entries = @() }
 }
 if (-not ($entries | Where-Object { $_.version -eq $Version })) {
+    $noteLines = @($ReleaseNotes -split "\r?\n" |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -and $_ -notmatch '^[-*]\s*$' })
+    if ($noteLines.Count -eq 0) { $noteLines = @("YOMU Player $Version") }
     $entry = [ordered]@{
         version = $Version
         date = (Get-Date -Format 'yyyy-MM-dd')
         channel = $Channel
-        notes = @($ReleaseNotes)
+        notes = $noteLines
     }
     $entries = @($entry) + $entries
 }

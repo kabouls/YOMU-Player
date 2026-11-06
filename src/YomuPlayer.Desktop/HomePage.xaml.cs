@@ -12,9 +12,11 @@ public sealed partial class HomePage : Page
 {
     private readonly List<Track> _likedTracks = new();
     private bool _shuffle;
+    private DateTime _lastLoadedAt = DateTime.MinValue;
 
     public ObservableCollection<ShelfVM> ForYouShelves { get; } = new();
     public ObservableCollection<ShelfVM> MoreShelves { get; } = new();
+    public ObservableCollection<ShelfVM> GenreShelves { get; } = new();
     public ObservableCollection<TrackVM> LikedRows { get; } = new();
 
     public HomePage()
@@ -27,15 +29,31 @@ public sealed partial class HomePage : Page
         base.OnNavigatedTo(e);
         AppServices.TrackRemoved += OnTrackRemoved;
         AppServices.LikedMusicChanged += OnLikedMusicChanged;
+        NotInterested.Changed += OnNotInterestedChanged;
+
+        // Home keeps its visual tree while the user opens a song or another tab. Reuse it briefly
+        // instead of rebuilding every card and firing another batch of image decodes on the UI thread.
+        if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(20) &&
+            (ForYouShelves.Count > 0 || MoreShelves.Count > 0))
+            return;
+
         await LoadAsync();
+        _lastLoadedAt = DateTime.UtcNow;
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         AppServices.TrackRemoved -= OnTrackRemoved;
         AppServices.LikedMusicChanged -= OnLikedMusicChanged;
+        NotInterested.Changed -= OnNotInterestedChanged;
         base.OnNavigatedFrom(e);
     }
+
+    private void OnNotInterestedChanged() => DispatcherQueue.TryEnqueue(() =>
+    {
+        _ = LoadForYouAsync();
+        _ = LoadGenreAsync();
+    });
 
     private async Task LoadAsync()
     {
@@ -59,6 +77,7 @@ public sealed partial class HomePage : Page
             {
                 await LoadMoreShelvesAsync(false);
             }
+            await LoadGenreAsync();
         }
         catch (Exception ex)
         {
@@ -133,6 +152,57 @@ public sealed partial class HomePage : Page
         {
             LikedEmpty.Text = "Couldn't load Liked Music.";
             LikedEmpty.Visibility = Visibility.Visible;
+            AppServices.ReportError(ex.Message);
+        }
+    }
+
+    private async Task LoadGenreAsync()
+    {
+        GenreShelves.Clear();
+        GenrePanel.Visibility = Visibility.Collapsed;
+        var settings = AppSettings.Current;
+        if (string.IsNullOrWhiteSpace(settings.GenreBrowseId)) return;
+
+        try
+        {
+            var shelves = await AppServices.GetGenreShelvesAsync();
+            foreach (var shelf in shelves) GenreShelves.Add(new ShelfVM(shelf));
+            if (GenreShelves.Count == 0) return;
+            GenreHeader.Text = $"{settings.GenreTitle} picks";
+            GenrePanel.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            AppServices.ReportError("Couldn't load the selected genre: " + ex.Message);
+        }
+    }
+
+    private async void Genres_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var genres = await AppServices.GetGenresAsync();
+            if (genres.Count == 0)
+            {
+                AppServices.ReportError("YouTube Music did not return any genres.");
+                return;
+            }
+
+            var picker = new GenrePickerDialog(genres, AppSettings.Current.GenreBrowseId);
+            var result = await Dialogs.ShowAsync(picker);
+            if (result == ContentDialogResult.Primary)
+            {
+                AppServices.SetGenre(picker.SelectedGenre);
+                await LoadGenreAsync();
+            }
+            else if (result == ContentDialogResult.Secondary)
+            {
+                AppServices.SetGenre(null);
+                await LoadGenreAsync();
+            }
+        }
+        catch (Exception ex)
+        {
             AppServices.ReportError(ex.Message);
         }
     }
