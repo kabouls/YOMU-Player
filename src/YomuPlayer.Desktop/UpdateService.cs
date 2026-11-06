@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 namespace YomuPlayer.Desktop;
 
 public sealed record UpdateAsset(string Url, string? Sha256);
+public sealed record UpdateDownloadProgress(double Fraction, long Bytes, long Total);
 public sealed record UpdateInfo(
     string Version,
     string Channel,
@@ -58,7 +59,7 @@ public static class UpdateService
     }
 
     public static async Task<UpdateLaunchResult> DownloadAndInstallAsync(
-        UpdateInfo info, IProgress<double>? progress = null, CancellationToken ct = default)
+        UpdateInfo info, IProgress<UpdateDownloadProgress>? progress = null, CancellationToken ct = default)
     {
         var asset = AppPaths.IsPortable ? info.Portable : info.Setup;
         if (asset is null || string.IsNullOrWhiteSpace(asset.Url))
@@ -219,7 +220,7 @@ public static class UpdateService
     }
 
     private static async Task DownloadAsync(
-        string url, string path, IProgress<double>? progress, CancellationToken ct)
+        string url, string path, IProgress<UpdateDownloadProgress>? progress, CancellationToken ct)
     {
         using var res = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         res.EnsureSuccessStatusCode();
@@ -234,9 +235,10 @@ public static class UpdateService
         {
             await output.WriteAsync(buffer.AsMemory(0, read), ct);
             done += read;
-            if (total > 0) progress?.Report(Math.Clamp((double)done / total, 0, 1));
+            if (total > 0) progress?.Report(new UpdateDownloadProgress(
+                Math.Clamp((double)done / total, 0, 1), done, total));
         }
-        if (total <= 0) progress?.Report(1);
+        if (total <= 0) progress?.Report(new UpdateDownloadProgress(1, done, 0));
     }
 
     private static async Task<string> HashFileAsync(string path, CancellationToken ct)

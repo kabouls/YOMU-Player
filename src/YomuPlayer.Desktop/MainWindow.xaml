@@ -134,13 +134,13 @@
         <local:PlayerBar x:Name="Bar" Grid.Row="2" />
 
         <!-- Lite mode: nothing but the essentials -->
-        <Grid x:Name="LitePanel" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Padding="20,0,20,12"
+        <Grid x:Name="LitePanel" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Padding="20,8,20,12"
               Background="#000000">
-            <StackPanel VerticalAlignment="Center" Spacing="10">
+            <StackPanel VerticalAlignment="Top" Spacing="8">
                 <StackPanel>
                     <TextBlock x:Name="LiteTitle" Text="Nothing playing" TextTrimming="CharacterEllipsis"
-                               Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                    <TextBlock x:Name="LiteArtist" TextTrimming="CharacterEllipsis"
+                               FontSize="16" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Name="LiteArtist" TextTrimming="CharacterEllipsis" FontSize="12"
                                Style="{ThemeResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
@@ -176,24 +176,24 @@
                         <FontIcon x:Name="LiteRepeatIcon" Glyph="&#xE8EE;" Opacity="0.5" />
                     </Button>
                     <Button Grid.Column="5" x:Name="LiteLike" Click="LiteLike_Click" Style="{StaticResource SubtleButtonStyle}"
-                            Width="32" Height="32" MinWidth="0" Visibility="Collapsed" IsEnabled="False"
+                            Width="34" Height="34" MinWidth="0" Padding="0" Visibility="Collapsed" IsEnabled="False"
                             HorizontalAlignment="Center" ToolTipService.ToolTip="Like this song"
                             AutomationProperties.AutomationId="LiteLike">
-                        <Grid Width="18" Height="18">
-                            <FontIcon x:Name="LiteLikeIcon" Glyph="&#xE8E1;" FontSize="14"
+                        <Grid Width="20" Height="20">
+                            <FontIcon x:Name="LiteLikeIcon" Glyph="&#xE8E1;" FontSize="15"
                                       Foreground="White" Opacity="0.55" />
-                            <FontIcon x:Name="LiteLikeFilledIcon" Glyph="&#xF3BF;" FontSize="14"
+                            <FontIcon x:Name="LiteLikeFilledIcon" Glyph="&#xF3BF;" FontSize="15"
                                       Foreground="White" Visibility="Collapsed" />
                         </Grid>
                     </Button>
                     <Button Grid.Column="6" x:Name="LiteDislike" Click="LiteDislike_Click" Style="{StaticResource SubtleButtonStyle}"
-                            Width="32" Height="32" MinWidth="0" Visibility="Collapsed" IsEnabled="False"
+                            Width="34" Height="34" MinWidth="0" Padding="0" Visibility="Collapsed" IsEnabled="False"
                             HorizontalAlignment="Center" ToolTipService.ToolTip="Dislike this song"
                             AutomationProperties.AutomationId="LiteDislike">
-                        <Grid Width="18" Height="18">
-                            <FontIcon x:Name="LiteDislikeIcon" Glyph="&#xE8E0;" FontSize="14"
+                        <Grid Width="20" Height="20">
+                            <FontIcon x:Name="LiteDislikeIcon" Glyph="&#xE8E0;" FontSize="15"
                                       Foreground="White" Opacity="0.55" />
-                            <FontIcon x:Name="LiteDislikeFilledIcon" Glyph="&#xF3C0;" FontSize="14"
+                            <FontIcon x:Name="LiteDislikeFilledIcon" Glyph="&#xF3C0;" FontSize="15"
                                       Foreground="White" Visibility="Collapsed" />
                         </Grid>
                     </Button>
@@ -245,25 +245,26 @@
                     </StackPanel>
                 </Grid>
 
-                <ScrollViewer MaxHeight="112" VerticalScrollBarVisibility="Auto"
+                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl x:Name="LiteUpNext" ItemsSource="{x:Bind LiteUpNextRows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="local:QueueRowVM">
-                                <Button Command="{x:Bind PlayCommand}" Background="Transparent" BorderThickness="0"
-                                        Padding="0,1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                                <Grid ColumnSpacing="6" Padding="0,1">
+                                <Button Command="{x:Bind PlayCommand}" Background="{x:Bind RowBackground}"
+                                        BorderThickness="0" CornerRadius="5" Padding="4,3"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <Grid ColumnSpacing="7" Padding="0,1">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="14" />
+                                        <ColumnDefinition Width="16" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <FontIcon Grid.Column="0" Glyph="{x:Bind StatusGlyph}" FontSize="9"
+                                    <FontIcon Grid.Column="0" Glyph="{x:Bind StatusGlyph}" FontSize="10"
                                               Opacity="{x:Bind StatusOpacity}" VerticalAlignment="Center"
                                               Foreground="#F2F2F2" />
-                                    <StackPanel Grid.Column="1" Spacing="0">
-                                        <TextBlock Text="{x:Bind Title}" FontSize="11" MaxLines="1"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{x:Bind Subtitle}" FontSize="10" MaxLines="1"
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock Text="{x:Bind Title}" FontSize="12" FontWeight="{x:Bind TitleWeight}"
+                                                   MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind Subtitle}" FontSize="11" MaxLines="1"
                                                    TextTrimming="CharacterEllipsis"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>

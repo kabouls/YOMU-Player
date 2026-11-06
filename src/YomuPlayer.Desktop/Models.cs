@@ -203,7 +203,7 @@ public sealed class TrackVM
 // A row in the player page's "Up next" list. OrderIndex is the position in play order, not the track index.
 public sealed class QueueRowVM
 {
-    private static readonly Brush CurrentRow = new SolidColorBrush(Color.FromArgb(0xFF, 0x1F, 0x1F, 0x1F));
+    private static readonly Brush CurrentRow = new SolidColorBrush(Color.FromArgb(0xFF, 0x2A, 0x2A, 0x2A));
     private static readonly Brush NormalRow = new SolidColorBrush(Color.FromArgb(0x00, 0x00, 0x00, 0x00));
     private ImageSource? _art;
     private bool _artLoaded;
@@ -238,6 +238,9 @@ public sealed class QueueRowVM
     public string Duration => Fmt.Time(Track.Duration);
     public string StatusGlyph => IsCurrent ? "\uE768" : IsPlayed ? "\uE73E" : "\uE768";
     public double StatusOpacity => IsCurrent ? 1.0 : IsPlayed ? 0.55 : 0.85;
+    public Windows.UI.Text.FontWeight TitleWeight => IsCurrent
+        ? Microsoft.UI.Text.FontWeights.SemiBold
+        : Microsoft.UI.Text.FontWeights.Normal;
     public ImageSource? Art
     {
         get

@@ -396,7 +396,7 @@ public sealed partial class MainWindow : Window
             presenter.IsResizable = false;
         }
         var scale = RootGrid.XamlRoot?.RasterizationScale ?? 1.0;
-        AppWindow.Resize(new SizeInt32((int)(420 * scale), (int)(300 * scale)));
+        AppWindow.Resize(new SizeInt32((int)(420 * scale), (int)(360 * scale)));
 
         _liteTrackId = null;
         _liteRatingTrackId = null;

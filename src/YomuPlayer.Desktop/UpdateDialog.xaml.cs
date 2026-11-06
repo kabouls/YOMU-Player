@@ -36,16 +36,23 @@ public sealed partial class UpdateDialog : ContentDialog
         try
         {
             _cts = new CancellationTokenSource();
+            long downloadedBytes = 0;
             var result = await UpdateService.DownloadAndInstallAsync(
-                _info, new Progress<double>(p =>
+                _info, new Progress<UpdateDownloadProgress>(p =>
                 {
-                    Progress.Value = p * 100;
-                    StatusText.Text = $"Downloading update... {p:P0}";
+                    downloadedBytes = p.Bytes;
+                    Progress.Value = p.Fraction * 100;
+                    var downloadedMb = p.Bytes / 1048576.0;
+                    StatusText.Text = p.Total > 0
+                        ? $"Downloading update... {p.Fraction:P0}  ·  {downloadedMb:0.0} / {p.Total / 1048576.0:0.0} MB"
+                        : $"Downloading update... {downloadedMb:0.0} MB";
                 }), _cts.Token);
 
             if (result == UpdateLaunchResult.ExitApp)
             {
-                StatusText.Text = "Update ready. Restarting YOMU Player...";
+                StatusText.Text = downloadedBytes > 0
+                    ? $"Downloaded {downloadedBytes / 1048576.0:0.0} MB. Restarting YOMU Player..."
+                    : "Update ready. Restarting YOMU Player...";
                 args.Cancel = false;
                 App.MainWindow?.CloseForUpdate();
             }
