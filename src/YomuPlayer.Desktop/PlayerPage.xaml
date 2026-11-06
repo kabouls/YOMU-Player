@@ -7,7 +7,7 @@
     Background="#000000">
 
     <Page.Resources>
-        <!-- Compact, clickable queue row: status on the left, title/artist stacked, no artwork. -->
+        <!-- Persistent queue row: status on the left, artwork, title/artist, duration. -->
         <DataTemplate x:Key="QueueRowTemplate" x:DataType="local:QueueRowVM">
             <Button Command="{x:Bind PlayCommand}" Background="{x:Bind RowBackground}" BorderThickness="0"
                     Padding="6,4" CornerRadius="6" HorizontalAlignment="Stretch"
@@ -16,6 +16,7 @@
                 <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="44" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
@@ -24,7 +25,15 @@
                               Opacity="{x:Bind StatusOpacity}" VerticalAlignment="Center"
                               Foreground="#F2F2F2" />
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <Grid Grid.Column="1" Width="44" Height="44">
+                        <Border CornerRadius="4">
+                            <Border.Background>
+                                <ImageBrush ImageSource="{x:Bind Art}" Stretch="UniformToFill" />
+                            </Border.Background>
+                        </Border>
+                    </Grid>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
                         <TextBlock Text="{x:Bind Title}" Foreground="#F2F2F2" MaxLines="1"
                                    TextTrimming="CharacterEllipsis" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -38,7 +47,7 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="2" Text="{x:Bind Duration}" VerticalAlignment="Center" MinWidth="38"
+                    <TextBlock Grid.Column="3" Text="{x:Bind Duration}" VerticalAlignment="Center" MinWidth="38"
                                TextAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Grid>
             </Button>

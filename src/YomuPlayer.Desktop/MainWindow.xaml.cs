@@ -109,6 +109,7 @@ public sealed partial class MainWindow : Window
             Title = t is null ? AppPaths.ProductName : $"{t.Title} - {t.ArtistLine}";
             if (_lite) UpdateLite();
         });
+        AppServices.Player.Queue.Changed += () => DispatcherQueue.TryEnqueue(UpdateLiteQueue);
         UpdateService.UpdateAvailable += info =>
             DispatcherQueue.TryEnqueue(() => ShowUpdateChip(info));
 
@@ -475,13 +476,19 @@ public sealed partial class MainWindow : Window
 
     private void UpdateLiteQueue()
     {
-        var upcoming = AppServices.Player.Queue.Upcoming().Skip(1).Take(3).ToList();
-        var key = string.Join("|", upcoming.Select(e => e.Track.VideoId));
+        if (!_lite) return;
+        var entries = AppServices.Player.Queue.Entries();
+        var position = AppServices.Player.Queue.Position;
+        var previous = entries.Where(e => e.OrderIndex < position).TakeLast(10);
+        var currentAndNext = entries.Where(e => e.OrderIndex >= position).Take(11);
+        var visible = previous.Concat(currentAndNext).ToList();
+        var key = string.Join("|", visible.Select(e => e.OrderIndex + ":" + e.Track.VideoId));
         if (key == _liteQueueKey) return;
         _liteQueueKey = key;
         LiteUpNextRows.Clear();
-        foreach (var entry in upcoming)
-            LiteUpNextRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, false, PlayLiteOrderAsync));
+        foreach (var entry in visible)
+            LiteUpNextRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, entry.IsCurrent,
+                PlayLiteOrderAsync, isPlayed: entry.OrderIndex < position));
         LiteUpNext.Visibility = LiteUpNextRows.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 

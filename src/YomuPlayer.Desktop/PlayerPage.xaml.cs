@@ -158,15 +158,9 @@ public sealed partial class PlayerPage : Page
 
         var entries = _player.Queue.Entries();
         QueueRows.Clear();
-        var current = entries.FirstOrDefault(e => e.IsCurrent);
-        if (current is not null)
-        {
-            var currentOrder = current.OrderIndex;
-            foreach (var entry in entries.Where(e => e.OrderIndex < currentOrder).TakeLast(10))
-                QueueRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, false, PlayAtAsync, isPlayed: true));
-            foreach (var entry in entries.Where(e => e.OrderIndex >= currentOrder).Take(10))
-                QueueRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, entry.IsCurrent, PlayAtAsync));
-        }
+        foreach (var entry in entries)
+            QueueRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, entry.IsCurrent, PlayAtAsync,
+                isPlayed: entry.OrderIndex < _player.Queue.Position));
 
         UpdateQueueSource();
         QueueEmpty.Visibility = QueueRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
