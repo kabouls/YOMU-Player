@@ -370,6 +370,20 @@ public static class AppServices
         lock (DislikedGate) return Disliked.Contains(videoId);
     }
 
+    // Lite mode does not need browse/search/lyrics content in memory. Dropping the caches here
+    // costs a reload when the normal window returns, but keeps the mini player at its floor.
+    public static void TrimForLite()
+    {
+        PageCache.Clear();
+        SearchCache.Clear();
+        CollectionCache.Clear();
+        CollectionPageCache.Clear();
+        ForYouCache.Clear();
+        ExtrasCache.Clear();
+        LyricsCache.Clear();
+        RelatedCache.Clear();
+    }
+
     public static IReadOnlyList<Track> FilterDisliked(IEnumerable<Track> tracks)
     {
         HashSet<string> disliked;

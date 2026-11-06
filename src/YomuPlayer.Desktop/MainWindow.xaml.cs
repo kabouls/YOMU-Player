@@ -403,7 +403,9 @@ public sealed partial class MainWindow : Window
         _liteRatingCts?.Cancel();
         UpdateLite();
         UpdateTitleBarRegions();
+        AppServices.TrimForLite();
         MemoryTrimmer.Start();
+        MemoryTrimmer.TrimNow();
     }
 
     private void ExitLite()
