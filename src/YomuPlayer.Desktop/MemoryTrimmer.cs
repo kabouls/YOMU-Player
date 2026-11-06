@@ -13,7 +13,7 @@ public static class MemoryTrimmer
     {
         Stop();
         // Frequent working-set release is cheap; a blocking GC every few seconds would hurt audio.
-        _timer = new Timer(_ => ReleaseWorkingSet(), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
+        _timer = new Timer(_ => ReleaseWorkingSet(), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(30));
     }
 
     public static void TrimNow() => Trim();
