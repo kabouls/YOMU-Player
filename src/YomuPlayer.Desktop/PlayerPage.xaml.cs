@@ -3,6 +3,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using YomuPlayer.Core;
 
@@ -116,7 +117,7 @@ public sealed partial class PlayerPage : Page
         var artPixels = (int)Math.Clamp(
             Math.Max(LeftPane.ActualWidth, 1200) * (XamlRoot?.RasterizationScale ?? 1.0),
             1200, 1800);
-        CoverBrush.ImageSource = Thumbnails.Create(track?.ThumbnailUrl, artPixels);
+        SetCover(track, artPixels);
         ArtPlaceholder.Visibility = string.IsNullOrEmpty(track?.ThumbnailUrl)
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -364,6 +365,34 @@ public sealed partial class PlayerPage : Page
         }
 
         FitArt();
+    }
+
+    private void SetCover(Track? track, int pixels)
+    {
+        if (track is null)
+        {
+            CoverBrush.ImageSource = null;
+            return;
+        }
+
+        // YTM often gives a yt3 channel avatar capped at 544px for the row thumbnail. The video
+        // still is available at 1280px, so prefer that for the large player pane.
+        var url = !string.IsNullOrWhiteSpace(track.VideoId)
+                  && track.ThumbnailUrl?.Contains("yt3.googleusercontent.com", StringComparison.OrdinalIgnoreCase) == true
+            ? $"https://i.ytimg.com/vi/{track.VideoId}/maxresdefault.jpg"
+            : track.ThumbnailUrl;
+
+        if (Thumbnails.Create(url, pixels) is not BitmapImage image)
+        {
+            CoverBrush.ImageSource = Thumbnails.Create(track.ThumbnailUrl, Math.Min(pixels, 544));
+            return;
+        }
+
+        image.ImageFailed += (_, _) =>
+        {
+            CoverBrush.ImageSource = Thumbnails.Create(track.ThumbnailUrl, Math.Min(pixels, 544));
+        };
+        CoverBrush.ImageSource = image;
     }
 
     private void FitArt()
