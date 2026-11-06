@@ -114,8 +114,8 @@ public sealed partial class PlayerPage : Page
         var changed = track?.VideoId != _shownTrackId;
 
         var artPixels = (int)Math.Clamp(
-            Math.Max(LeftPane.ActualWidth, 900) * (XamlRoot?.RasterizationScale ?? 1.0),
-            900, 1400);
+            Math.Max(LeftPane.ActualWidth, 1200) * (XamlRoot?.RasterizationScale ?? 1.0),
+            1200, 1800);
         CoverBrush.ImageSource = Thumbnails.Create(track?.ThumbnailUrl, artPixels);
         ArtPlaceholder.Visibility = string.IsNullOrEmpty(track?.ThumbnailUrl)
             ? Visibility.Visible
