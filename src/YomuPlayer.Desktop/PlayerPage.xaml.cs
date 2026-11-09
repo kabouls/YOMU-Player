@@ -375,24 +375,42 @@ public sealed partial class PlayerPage : Page
             return;
         }
 
-        // YTM often gives a yt3 channel avatar capped at 544px for the row thumbnail. The video
-        // still is available at 1280px, so prefer that for the large player pane.
-        var url = !string.IsNullOrWhiteSpace(track.VideoId)
-                  && track.ThumbnailUrl?.Contains("yt3.googleusercontent.com", StringComparison.OrdinalIgnoreCase) == true
-            ? $"https://i.ytimg.com/vi/{track.VideoId}/maxresdefault.jpg"
-            : track.ThumbnailUrl;
+        var candidates = new List<string>();
+        var thumb = track.ThumbnailUrl;
+        var isYoutubeThumb = thumb?.Contains("i.ytimg.com", StringComparison.OrdinalIgnoreCase) == true
+                             || thumb?.Contains("yt3.googleusercontent.com", StringComparison.OrdinalIgnoreCase) == true;
 
-        if (Thumbnails.Create(url, pixels) is not BitmapImage image)
+        // YTM often returns a 480 px hqdefault or a 544 px channel avatar. The video still is
+        // available at 1280 px (maxresdefault), then sddefault is the safe fallback.
+        if (!string.IsNullOrWhiteSpace(track.VideoId) && (isYoutubeThumb || string.IsNullOrWhiteSpace(thumb)))
+            candidates.Add($"https://i.ytimg.com/vi/{track.VideoId}/maxresdefault.jpg");
+        if (!string.IsNullOrWhiteSpace(track.VideoId))
+            candidates.Add($"https://i.ytimg.com/vi/{track.VideoId}/sddefault.jpg");
+        if (!string.IsNullOrWhiteSpace(thumb)) candidates.Add(thumb);
+
+        TryCover(track, pixels, candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), 0);
+    }
+
+    private void TryCover(Track track, int pixels, IReadOnlyList<string> candidates, int index)
+    {
+        while (index < candidates.Count)
         {
-            CoverBrush.ImageSource = Thumbnails.Create(track.ThumbnailUrl, Math.Min(pixels, 544));
-            return;
+            var candidate = candidates[index++];
+            if (Thumbnails.Create(candidate, pixels) is BitmapImage image)
+            {
+                var next = index;
+                image.ImageFailed += (_, _) =>
+                {
+                    if (ReferenceEquals(CoverBrush.ImageSource, image))
+                        TryCover(track, pixels, candidates, next);
+                };
+                CoverBrush.ImageSource = image;
+                return;
+            }
         }
 
-        image.ImageFailed += (_, _) =>
-        {
-            CoverBrush.ImageSource = Thumbnails.Create(track.ThumbnailUrl, Math.Min(pixels, 544));
-        };
-        CoverBrush.ImageSource = image;
+        // Last-resort thumbnail is better than a blank pane, even if it is only 544 px.
+        CoverBrush.ImageSource = Thumbnails.Create(track.ThumbnailUrl, Math.Min(pixels, 544));
     }
 
     private void FitArt()
