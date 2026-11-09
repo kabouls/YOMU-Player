@@ -1,4 +1,3 @@
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -8,42 +7,17 @@ namespace YomuPlayer.Desktop;
 
 public sealed partial class Templates : ResourceDictionary
 {
-    private readonly DispatcherQueue _ui = DispatcherQueue.GetForCurrentThread();
-    private DispatcherQueueTimer? _hoverTimer;
-    private Track? _hoverTrack;
-
     public Templates()
     {
         InitializeComponent();
     }
 
-    // Hovering a song shows a play button over its art, and after a short dwell warms its stream
-    // so the click that follows starts almost immediately.
+    // Hovering a song shows a play button over its art. Stream warm-up is deliberately not started on
+    // hover: the yt-dlp process consumes CPU/disk and causes system-wide cursor hitches on some PCs.
     private void Row_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
         if (sender is not FrameworkElement row) return;
         if (FindByTag(row, "HoverPlay") is { } overlay) overlay.Opacity = 1;
-
-        var track = TrackOf(row.DataContext);
-        if (track is null) return;
-
-        _hoverTrack = track;
-        if (_hoverTimer is null)
-        {
-            _hoverTimer = _ui.CreateTimer();
-            _hoverTimer.Interval = TimeSpan.FromMilliseconds(450);
-            _hoverTimer.IsRepeating = false;
-            _hoverTimer.Tick += (t, _) =>
-            {
-                t.Stop();
-                if (_hoverTrack is { } warm) AppServices.Prefetch(warm);
-            };
-        }
-        else
-        {
-            _hoverTimer.Stop();
-        }
-        _hoverTimer.Start();
     }
 
     private void Row_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
@@ -67,16 +41,7 @@ public sealed partial class Templates : ResourceDictionary
     {
         if (sender is not FrameworkElement row) return;
         if (FindByTag(row, "HoverPlay") is { } overlay) overlay.Opacity = 0;
-        _hoverTimer?.Stop();
-        _hoverTrack = null;
     }
-
-    private static Track? TrackOf(object? context) => context switch
-    {
-        ItemVM { Item.IsTrack: true } vm => vm.Item.Track,
-        TrackVM tv => tv.Track,
-        _ => null
-    };
 
     private static FrameworkElement? FindByTag(DependencyObject root, string tag)
     {
