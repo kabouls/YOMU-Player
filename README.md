@@ -76,7 +76,7 @@ Requirements: **Windows 10 1809+ or Windows 11, x64**.
 ## What it does
 
 - **Home / Explore / Search** — Home, quick picks for signed-out users, For You and Liked Music for signed-in users, Explore shelves, rich search results.
-- **Discovery rows** — “Because you liked X” plus a second “More like X” row that deliberately leaves X out. Pick a mood/genre to add a manual genre row to Home.
+- **Discovery rows** — one “Because you liked X” shelf with this session’s plays removed, plus a “From your session” shelf that replays the current session in random order. The session shelf is hidden on a new session. Pick a mood/genre to add a manual genre row to Home.
 - **Your library** — Liked Music, liked songs, a playlist card grid, playlist editing, and a **local** recently-played history. History is stored on this PC only; it is not your YouTube account history.
 - **Region-aware Explore** — Auto, Worldwide (no country filter), or a specific country for charts, new releases and browse shelves.
 - **Playback** — song radio, album/playlist queues, autoplay, shuffle, repeat, quality selection, prefetching the next track.
