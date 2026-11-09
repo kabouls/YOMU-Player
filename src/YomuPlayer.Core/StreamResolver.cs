@@ -156,6 +156,7 @@ public sealed class StreamResolver : IStreamResolver
         foreach (var a in args) psi.ArgumentList.Add(a);
 
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("Could not start yt-dlp");
+        try { p.PriorityClass = ProcessPriorityClass.Idle; } catch { /* process may have exited */ }
         var stdout = p.StandardOutput.ReadToEndAsync(ct);
         var stderr = p.StandardError.ReadToEndAsync(ct);
         await p.WaitForExitAsync(ct);
