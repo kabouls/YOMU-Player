@@ -97,6 +97,7 @@ public static class AppServices
             Quality = (AudioQuality)Math.Clamp(settings.Quality, 0, 2),
             Autoplay = settings.Autoplay,
             RadioProvider = async seed => FilterRadio(MixRadio(await Yt.GetRadioAsync(seed.VideoId), seed)),
+            TrackFilter = track => IsDisliked(track.VideoId) || NotInterested.IsBlocked(track.VideoId),
             QueueTitleProvider = track => Yt.TryGetCachedExtras(track.VideoId)?.QueueTitle
         };
         Player.TrackChanged += track => { if (track is not null) PlaybackHistory.Record(track); };
@@ -1255,10 +1256,13 @@ public static class AppServices
 
     public static async Task StartRadioExplicitAsync(Track track)
     {
-        RequestPlayer(PlayerTab.Queue);
         var radio = FilterRadio(MixRadio(await Yt.GetRadioAsync(track.VideoId), track));
-        var queue = new List<Track> { track };
+        var queue = new List<Track>();
+        if (!IsDisliked(track.VideoId) && !NotInterested.IsBlocked(track.VideoId))
+            queue.Add(track);
         queue.AddRange(radio.Where(t => t.VideoId != track.VideoId));
+        if (queue.Count == 0) return;
+        RequestPlayer(PlayerTab.Queue);
         await Player.PlayQueueAsync(queue, 0);
     }
 

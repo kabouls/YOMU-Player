@@ -56,6 +56,10 @@ public sealed class PlayerService : IDisposable
     // Supplies "more like this" tracks. Used for song radio on click and for endless playback when the queue runs out.
     public Func<Track, Task<IReadOnlyList<Track>>>? RadioProvider { get; set; }
 
+    // Final gate for every radio-generated queue insertion. A dislike can arrive while the radio request
+    // is in flight, so filtering only the provider response is not enough.
+    public Func<Track, bool>? TrackFilter { get; set; }
+
     // Supplies the queue's display title ("Playing from ...") after a radio response has been parsed.
     public Func<Track, string?>? QueueTitleProvider { get; set; }
     public bool Autoplay { get; set; } = true;
@@ -113,7 +117,7 @@ public sealed class PlayerService : IDisposable
                 var list = await radio;
                 if (Queue.Current?.VideoId == track.VideoId)
                 {
-                    Queue.ReplaceAfterCurrent(list);
+                    Queue.ReplaceAfterCurrent(FilterGenerated(list));
                     Queue.SourceTitle = QueueTitleProvider?.Invoke(track) ?? Queue.SourceTitle;
                     _ = PrefetchNextAsync();
                 }
@@ -245,6 +249,12 @@ public sealed class PlayerService : IDisposable
         Queue.AppendRange(tracks);
     }
 
+    private IReadOnlyList<Track> FilterGenerated(IEnumerable<Track> tracks)
+    {
+        var list = tracks.ToList();
+        return TrackFilter is null ? list : list.Where(t => !TrackFilter(t)).ToList();
+    }
+
     private async Task PlayCurrentAsync(TimeSpan? resumeAt = null, bool isRetry = false)
     {
         var track = Queue.Current;
@@ -318,7 +328,7 @@ public sealed class PlayerService : IDisposable
             if (seed is null) return;
             var more = await RadioProvider!(seed);
             var known = Queue.Tracks.Select(t => t.VideoId).ToHashSet();
-            Queue.AppendRange(more.Where(t => known.Add(t.VideoId)));
+            Queue.AppendRange(FilterGenerated(more).Where(t => known.Add(t.VideoId)));
         }
         catch
         {
