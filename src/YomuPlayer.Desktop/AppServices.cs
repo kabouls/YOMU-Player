@@ -646,74 +646,22 @@ public static class AppServices
 
         var cursor = candidates.Count == 0 ? 0 : Math.Abs(AppSettings.Current.ForYouSeedCursor % candidates.Count);
         var rotated = candidates.Skip(cursor).Concat(candidates.Take(cursor)).ToList();
-        var chosen = rotated.Take(2).ToList();
-        var nextCursor = candidates.Count == 0 ? 0 : (cursor + 2) % candidates.Count;
+        var chosen = rotated.Take(1).ToList();
+        var nextCursor = candidates.Count == 0 ? 0 : (cursor + 1) % candidates.Count;
 
         var shelves = new List<Shelf>();
-        var seeds = chosen
-            .Select(candidate => (
-                Candidate: candidate,
-                Seed: shuffle
-                    ? candidate.All[Random.Shared.Next(candidate.All.Count)]
-                    : candidate.All[0]))
-            .ToList();
-        var radioTasks = seeds
-            .Select(async item => (
-                item.Candidate,
-                item.Seed,
-                Radio: await Safe(() => Yt.GetRadioAsync(item.Seed.VideoId))))
-            .ToList();
-
-        // Start the artist searches alongside the radios; both only depend on the liked sample.
-        var searchArtists = chosen.Concat(rotated.Where(c => !chosen.Contains(c))).Take(3).ToList();
-        var searchTasks = searchArtists
-            .Select(candidate => Safe(() => Yt.SearchSongsAsync(candidate.Artist)))
-            .ToList();
-
-        var radios = await Task.WhenAll(radioTasks);
-        var searchResults = await Task.WhenAll(searchTasks);
-
-        foreach (var (candidate, seed, radio) in radios)
+        foreach (var candidate in chosen)
         {
-            var isSecond = ReferenceEquals(candidate, seeds.Count > 1 ? seeds[1].Candidate : null);
-            var picked = PickForYou(radio, seed.VideoId, 10, 2, shuffle, isSecond ? candidate.Artist : null);
+            var seed = shuffle
+                ? candidate.All[Random.Shared.Next(candidate.All.Count)]
+                : candidate.All[0];
+            var radio = await Safe(() => Yt.GetRadioAsync(seed.VideoId));
+            var picked = PickForYou(radio, seed.VideoId, 10, 2, shuffle);
             if (picked.Count == 0) continue;
 
             var displayArtist = DisplayArtist(candidate.Artist);
-            var title = isSecond ? $"More like {displayArtist}" : $"Because you liked {displayArtist}";
-            shelves.Add(new Shelf(title, ShelfStyle.Cards, picked.Select(ToMedia).ToList()));
-        }
-
-        var more = new List<Track>();
-        var seen = new HashSet<string>();
-        var perArtist = new Dictionary<string, int>();
-
-        for (var i = 0; i < searchArtists.Count; i++)
-        {
-            var candidate = searchArtists[i];
-            var songs = searchResults[i]
-                .Where(t => !IsDisliked(t.VideoId) && !NotInterested.IsBlocked(t.VideoId))
-                .ToList();
-            var ordered = shuffle
-                ? songs.OrderBy(_ => Random.Shared.Next()).ToList()
-                : songs.ToList();
-
-            foreach (var track in ordered)
-            {
-                if (!seen.Add(track.VideoId)) continue;
-                var artist = track.Artists.FirstOrDefault()?.Name ?? candidate.Artist;
-                perArtist.TryGetValue(artist, out var count);
-                if (count >= 3) continue;
-                perArtist[artist] = count + 1;
-                more.Add(track);
-                if (more.Count >= 12) break;
-            }
-            if (more.Count >= 12) break;
-        }
-        if (more.Count > 0)
-        {
-            shelves.Add(new Shelf("More from artists you like", ShelfStyle.Cards,
-                more.Select(ToMedia).ToList()));
+            shelves.Add(new Shelf($"Because you liked {displayArtist}", ShelfStyle.Cards,
+                picked.Select(ToMedia).ToList()));
         }
 
         AppSettings.Current.ForYouSeedCursor = nextCursor;
@@ -760,7 +708,7 @@ public static class AppServices
     private static string DisplayArtist(string artist) =>
         artist.Replace(" - Topic", "", StringComparison.OrdinalIgnoreCase).Trim();
 
-    private static MediaItem ToMedia(Track track) =>
+    public static MediaItem ToMedia(Track track) =>
         new(MediaKind.Song, track.Title, track.ArtistLine, track.ThumbnailUrl,
             VideoId: track.VideoId, Track: track);
 

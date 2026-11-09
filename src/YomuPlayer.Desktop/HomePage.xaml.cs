@@ -13,6 +13,7 @@ public sealed partial class HomePage : Page
     private readonly List<Track> _likedTracks = new();
     private bool _shuffle;
     private DateTime _lastLoadedAt = DateTime.MinValue;
+    private string _lastSessionKey = "";
 
     public ObservableCollection<ShelfVM> ForYouShelves { get; } = new();
     public ObservableCollection<ShelfVM> MoreShelves { get; } = new();
@@ -31,14 +32,24 @@ public sealed partial class HomePage : Page
         AppServices.LikedMusicChanged += OnLikedMusicChanged;
         NotInterested.Changed += OnNotInterestedChanged;
 
+        var sessionKey = CurrentSessionKey();
         // Home keeps its visual tree while the user opens a song or another tab. Reuse it briefly
-        // instead of rebuilding every card and firing another batch of image decodes on the UI thread.
-        if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(20) &&
+        // unless the playback session changed (the session shelf depends on it).
+        if (sessionKey == _lastSessionKey &&
+            DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(20) &&
             (ForYouShelves.Count > 0 || MoreShelves.Count > 0))
             return;
 
         await LoadAsync();
         _lastLoadedAt = DateTime.UtcNow;
+        _lastSessionKey = sessionKey;
+    }
+
+    private static string CurrentSessionKey()
+    {
+        var player = AppServices.Player;
+        return string.Join("|", player.SessionHistory.Select(t => t.VideoId)
+            .Append(player.Queue.Current?.VideoId ?? ""));
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -112,8 +123,24 @@ public sealed partial class HomePage : Page
                 try
                 {
                     var shelves = await AppServices.GetForYouShelvesAsync(_shuffle);
+                    var session = SessionTracks();
+                    var played = session.Select(t => t.VideoId).ToHashSet(StringComparer.Ordinal);
                     ForYouShelves.Clear();
-                    foreach (var shelf in shelves) ForYouShelves.Add(new ShelfVM(shelf));
+
+                    // One discovery shelf: the existing artist recommendation with every session track
+                    // removed. The other shelf is the session itself, shown in random order.
+                    foreach (var shelf in shelves.Take(1))
+                    {
+                        var items = shelf.Items
+                            .Where(i => !played.Contains(i.Track?.VideoId ?? i.VideoId ?? ""))
+                            .ToList();
+                        if (items.Count > 0)
+                            ForYouShelves.Add(new ShelfVM(shelf with { Items = items }));
+                    }
+
+                    var history = SessionHistoryShelf(session);
+                    if (history is not null) ForYouShelves.Add(history);
+
                     ForYouEmpty.Visibility = ForYouShelves.Count == 0
                         ? Visibility.Visible
                         : Visibility.Collapsed;
@@ -137,6 +164,29 @@ public sealed partial class HomePage : Page
         {
             ForYouLoading.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private static List<Track> SessionTracks()
+    {
+        var player = AppServices.Player;
+        var tracks = player.SessionHistory.ToList();
+        if (player.Queue.Current is { } current) tracks.Add(current);
+        return tracks
+            .Where(t => !AppServices.IsDisliked(t.VideoId) && !NotInterested.IsBlocked(t.VideoId))
+            .GroupBy(t => t.VideoId, StringComparer.Ordinal)
+            .Select(g => g.First())
+            .ToList();
+    }
+
+    private static ShelfVM? SessionHistoryShelf(IReadOnlyList<Track> session)
+    {
+        if (session.Count == 0) return null;
+        var picked = session
+            .OrderBy(_ => Random.Shared.Next())
+            .Take(12)
+            .Select(AppServices.ToMedia)
+            .ToList();
+        return new ShelfVM(new Shelf("From your session", ShelfStyle.Cards, picked));
     }
 
     private async Task LoadLikedAsync()
