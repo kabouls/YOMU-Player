@@ -324,15 +324,9 @@ public static class AppServices
         if (!Auth.IsSignedIn)
             throw new InvalidOperationException("Sign in with Google to rate songs.");
 
-        var apiRating = rating switch
-        {
-            TrackRating.Like => "like",
-            TrackRating.Dislike => "dislike",
-            _ => "none"
-        };
-        await Data.RateVideoAsync(await LibraryTokenAsync(), track.VideoId, apiRating, ct);
+        // Apply the local filter first. The YouTube Data API call can take a second; a radio response
+        // arriving in that window must still see the dislike and drop the track.
         RatingCache[track.VideoId] = (rating, DateTime.UtcNow);
-
         lock (DislikedGate)
         {
             if (rating == TrackRating.Dislike) Disliked.Add(track.VideoId);
@@ -351,6 +345,21 @@ public static class AppServices
 
         if (rating == TrackRating.Dislike && Player.Queue.Current?.VideoId == track.VideoId)
             _ = SkipDislikedSafeAsync(track.VideoId);
+
+        var apiRating = rating switch
+        {
+            TrackRating.Like => "like",
+            TrackRating.Dislike => "dislike",
+            _ => "none"
+        };
+        try
+        {
+            await Data.RateVideoAsync(await LibraryTokenAsync(), track.VideoId, apiRating, ct);
+        }
+        catch (Exception ex)
+        {
+            ReportError("Rating stored locally; YouTube sync failed: " + ex.Message);
+        }
 
         ReportInfo(rating switch
         {
