@@ -97,19 +97,6 @@
                               ScrollViewer.VerticalScrollBarVisibility="Disabled" />
                 </StackPanel>
 
-                <StackPanel x:Name="GenrePanel" Visibility="Collapsed" Spacing="4" Margin="0,8,0,0">
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="GenreHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
-                        <Button Grid.Column="1" Content="Change genre" Click="Genres_Click" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{x:Bind GenreShelves}"
-                                  ItemTemplate="{StaticResource HomeShelfTemplate}" />
-                </StackPanel>
-
                 <ItemsControl ItemsSource="{x:Bind MoreShelves}"
                               ItemTemplate="{StaticResource HomeShelfTemplate}" />
             </StackPanel>

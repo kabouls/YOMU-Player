@@ -54,6 +54,8 @@ public sealed partial class PlayerPage : Page
 
         _player.TrackChanged += OnTrackChanged;
         _player.Queue.Changed += OnQueueChanged;
+        AppServices.RatingChanged += OnRatingChanged;
+        NotInterested.Changed += OnNotInterestedChanged;
 
         _loaded = true;
         SelectTab(PlayerTab.Queue, load: false);
@@ -75,6 +77,8 @@ public sealed partial class PlayerPage : Page
         _loaded = false;
         _player.TrackChanged -= OnTrackChanged;
         _player.Queue.Changed -= OnQueueChanged;
+        AppServices.RatingChanged -= OnRatingChanged;
+        NotInterested.Changed -= OnNotInterestedChanged;
         _lyricsCts?.Cancel();
         base.OnNavigatedFrom(e);
     }
@@ -108,6 +112,10 @@ public sealed partial class PlayerPage : Page
     private void OnTrackChanged(Track? track) => _ui.TryEnqueue(() => RefreshTrack(null));
 
     private void OnQueueChanged() => _ui.TryEnqueue(RebuildQueue);
+
+    private void OnRatingChanged(string videoId, TrackRating rating) => _ui.TryEnqueue(RebuildQueue);
+
+    private void OnNotInterestedChanged() => _ui.TryEnqueue(RebuildQueue);
 
     private void RefreshTrack(PageRequest? request)
     {
@@ -159,7 +167,9 @@ public sealed partial class PlayerPage : Page
 
         var entries = _player.Queue.Entries();
         QueueRows.Clear();
-        foreach (var entry in entries)
+        foreach (var entry in entries.Where(e =>
+                     !AppServices.IsDisliked(e.Track.VideoId) &&
+                     !NotInterested.IsBlocked(e.Track.VideoId)))
             QueueRows.Add(new QueueRowVM(entry.Track, entry.OrderIndex, entry.IsCurrent, PlayAtAsync,
                 isPlayed: entry.OrderIndex < _player.Queue.Position));
 

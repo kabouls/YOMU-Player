@@ -104,6 +104,7 @@ public sealed partial class MainWindow : Window
                 _liteRating = rating;
                 UpdateLiteRating();
             }
+            if (_lite) UpdateLiteQueue();
         });
         AppServices.LibraryChanged += () => DispatcherQueue.TryEnqueue(() => _ = RefreshSidebarLibrary());
         AppServices.Player.TrackChanged += t => DispatcherQueue.TryEnqueue(() =>
@@ -481,7 +482,10 @@ public sealed partial class MainWindow : Window
     private void UpdateLiteQueue()
     {
         if (!_lite) return;
-        var entries = AppServices.Player.Queue.Entries();
+        var entries = AppServices.Player.Queue.Entries()
+            .Where(e => !AppServices.IsDisliked(e.Track.VideoId) &&
+                        !NotInterested.IsBlocked(e.Track.VideoId))
+            .ToList();
         var position = AppServices.Player.Queue.Position;
         var previous = entries.Where(e => e.OrderIndex < position).TakeLast(10);
         var currentAndNext = entries.Where(e => e.OrderIndex >= position).Take(11);
