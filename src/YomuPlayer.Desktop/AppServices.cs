@@ -22,6 +22,8 @@ public static class AppServices
     private static readonly Dictionary<string, (DateTime At, CollectionPageData Data)> CollectionPageCache = new();
     private const int MaxCollectionPageCache = 12;
     private static readonly Dictionary<bool, (DateTime At, IReadOnlyList<Shelf> Shelves)> ForYouCache = new();
+    private static readonly object GenreShelfGate = new();
+    private static (DateTime At, string Key, Shelf? Shelf) _genreShelfCache;
     private static readonly TimeSpan ForYouTtl = TimeSpan.FromMinutes(15);
 
     private sealed record ForYouDiskCache(DateTimeOffset At, List<Shelf> Shelves, int Cursor);
@@ -198,6 +200,7 @@ public static class AppServices
         AppSettings.Current.GenreBrowseId = genre?.BrowseId;
         AppSettings.Current.GenreParams = genre?.BrowseParams;
         AppSettings.Save();
+        ClearForYouCache();
     }
 
     public static async Task<IReadOnlyList<Shelf>> GetGenreShelvesAsync()
@@ -206,6 +209,65 @@ public static class AppServices
         if (string.IsNullOrWhiteSpace(settings.GenreBrowseId)) return Array.Empty<Shelf>();
         var page = await GetBrowseAsync(settings.GenreBrowseId, settings.GenreParams);
         return page.Shelves.Take(2).ToList();
+    }
+
+    // One genre/mood shelf for Home. If the user has picked a genre we use it; otherwise a genre is
+    // picked from YouTube Music's mood/genre list and the shelf rotates on refresh.
+    public static async Task<Shelf?> GetGenreRecommendationShelfAsync()
+    {
+        var settings = AppSettings.Current;
+        var key = string.IsNullOrWhiteSpace(settings.GenreBrowseId) ? "auto" : settings.GenreBrowseId;
+        lock (GenreShelfGate)
+        {
+            if (_genreShelfCache.Shelf is { } cached &&
+                _genreShelfCache.Key == key &&
+                DateTime.UtcNow - _genreShelfCache.At < ForYouTtl)
+            {
+                var fresh = cached with
+                {
+                    Items = cached.Items.Where(i =>
+                        !IsDisliked(i.Track?.VideoId ?? i.VideoId ?? "") &&
+                        !NotInterested.IsBlocked(i.Track?.VideoId ?? i.VideoId)).ToList()
+                };
+                if (fresh.Items.Count > 0) return fresh;
+            }
+        }
+
+        MediaItem genre;
+        if (!string.IsNullOrWhiteSpace(settings.GenreBrowseId))
+        {
+            genre = new MediaItem(MediaKind.Nav, settings.GenreTitle ?? "Genre", "",
+                null, BrowseId: settings.GenreBrowseId, BrowseParams: settings.GenreParams);
+        }
+        else
+        {
+            var genres = await GetGenresAsync();
+            if (genres.Count == 0) return null;
+            genre = genres[Random.Shared.Next(genres.Count)];
+        }
+
+        if (string.IsNullOrWhiteSpace(genre.BrowseId)) return null;
+
+        try
+        {
+            var page = await GetBrowseAsync(genre.BrowseId, genre.BrowseParams);
+            var source = page.Shelves.FirstOrDefault(s => s.Style == ShelfStyle.Cards && s.Items.Count > 0)
+                         ?? page.Shelves.FirstOrDefault(s => s.Items.Count > 0);
+            if (source is null) return null;
+
+            var items = source.Items.Where(i =>
+                !IsDisliked(i.Track?.VideoId ?? i.VideoId ?? "") &&
+                !NotInterested.IsBlocked(i.Track?.VideoId ?? i.VideoId)).ToList();
+            if (items.Count == 0) return null;
+
+            var shelf = source with { Title = $"{DisplayArtist(genre.Title)} picks", Items = items };
+            lock (GenreShelfGate) _genreShelfCache = (DateTime.UtcNow, key, shelf);
+            return shelf;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public static async Task<IReadOnlyList<MediaItem>> GetLibraryPlaylistsAsync(bool refresh = false)
@@ -511,6 +573,7 @@ public static class AppServices
     public static void ClearForYouCache()
     {
         lock (ForYouCache) ForYouCache.Clear();
+        lock (GenreShelfGate) _genreShelfCache = default;
         foreach (var shuffle in new[] { false, true })
         {
             try { File.Delete(ForYouDiskPath(shuffle)); }

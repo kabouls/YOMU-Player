@@ -17,7 +17,6 @@ public sealed partial class HomePage : Page
 
     public ObservableCollection<ShelfVM> ForYouShelves { get; } = new();
     public ObservableCollection<ShelfVM> MoreShelves { get; } = new();
-    public ObservableCollection<ShelfVM> GenreShelves { get; } = new();
     public ObservableCollection<TrackVM> LikedRows { get; } = new();
 
     public HomePage()
@@ -63,7 +62,6 @@ public sealed partial class HomePage : Page
     private void OnNotInterestedChanged() => DispatcherQueue.TryEnqueue(() =>
     {
         _ = LoadForYouAsync();
-        _ = LoadGenreAsync();
     });
 
     private async Task LoadAsync()
@@ -88,7 +86,6 @@ public sealed partial class HomePage : Page
             {
                 await LoadMoreShelvesAsync(false);
             }
-            await LoadGenreAsync();
         }
         catch (Exception ex)
         {
@@ -122,6 +119,7 @@ public sealed partial class HomePage : Page
             {
                 try
                 {
+                    var genreTask = AppServices.GetGenreRecommendationShelfAsync();
                     var shelves = await AppServices.GetForYouShelvesAsync(_shuffle);
                     var session = SessionTracks();
                     var played = session.Select(t => t.VideoId).ToHashSet(StringComparer.Ordinal);
@@ -140,6 +138,15 @@ public sealed partial class HomePage : Page
 
                     var history = SessionHistoryShelf(session);
                     if (history is not null) ForYouShelves.Add(history);
+
+                    if (await genreTask is { } genre)
+                    {
+                        var items = genre.Items
+                            .Where(i => !played.Contains(i.Track?.VideoId ?? i.VideoId ?? ""))
+                            .ToList();
+                        if (items.Count > 0)
+                            ForYouShelves.Add(new ShelfVM(genre with { Items = items }));
+                    }
 
                     ForYouEmpty.Visibility = ForYouShelves.Count == 0
                         ? Visibility.Visible
@@ -206,27 +213,6 @@ public sealed partial class HomePage : Page
         }
     }
 
-    private async Task LoadGenreAsync()
-    {
-        GenreShelves.Clear();
-        GenrePanel.Visibility = Visibility.Collapsed;
-        var settings = AppSettings.Current;
-        if (string.IsNullOrWhiteSpace(settings.GenreBrowseId)) return;
-
-        try
-        {
-            var shelves = await AppServices.GetGenreShelvesAsync();
-            foreach (var shelf in shelves) GenreShelves.Add(new ShelfVM(shelf));
-            if (GenreShelves.Count == 0) return;
-            GenreHeader.Text = $"{settings.GenreTitle} picks";
-            GenrePanel.Visibility = Visibility.Visible;
-        }
-        catch (Exception ex)
-        {
-            AppServices.ReportError("Couldn't load the selected genre: " + ex.Message);
-        }
-    }
-
     private async void Genres_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -243,12 +229,12 @@ public sealed partial class HomePage : Page
             if (result == ContentDialogResult.Primary)
             {
                 AppServices.SetGenre(picker.SelectedGenre);
-                await LoadGenreAsync();
+                await LoadForYouAsync();
             }
             else if (result == ContentDialogResult.Secondary)
             {
                 AppServices.SetGenre(null);
-                await LoadGenreAsync();
+                await LoadForYouAsync();
             }
         }
         catch (Exception ex)
