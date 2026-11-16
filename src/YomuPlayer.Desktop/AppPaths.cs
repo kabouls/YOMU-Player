@@ -27,9 +27,7 @@ public static class AppPaths
     public static string ProductName => IsNightly ? "YOMU Player Nightly" : "YOMU Player";
     public static string AppId => IsNightly ? "YOMU.Player.Nightly" : "YOMU.Player";
     public static string Scheme => IsNightly ? "yomu-nightly" : "yomu";
-    public static string PipeName => IsNightly
-        ? (IsPortable ? "YOMU.Player.Nightly.Portable.Pipe" : "YOMU.Player.Nightly.Pipe")
-        : (IsPortable ? "YOMU.Player.Portable.Pipe" : "YOMU.Player.Pipe");
+    public static string PipeName => IsNightly ? "YOMU.Player.Nightly.Pipe" : "YOMU.Player.Pipe";
 
     public static string Version { get; } = ReadVersion();
     public static string DataRoot { get; } = ResolveDataRoot();
